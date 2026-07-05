@@ -3,12 +3,13 @@ import { db, schema } from "@/lib/db";
 import { and, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
-import { join, dirname, resolve } from "path";
+import { join, dirname } from "path";
 import { embedTexts, hasLlmConfigured } from "@/lib/llm/provider";
+import { defaultDataDir } from "@/lib/runtime-paths";
 
 export const dynamic = "force-dynamic";
 
-const DATA_DIR = resolve(process.env.DATA_DIR ?? "./data");
+const DATA_DIR = defaultDataDir();
 
 export async function GET(
   req: NextRequest,

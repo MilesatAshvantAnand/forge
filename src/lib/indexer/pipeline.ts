@@ -1,8 +1,9 @@
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import { join, resolve } from "path";
+import { join } from "path";
 import { extractZip, detectLanguage } from "./zip-parser";
+import { defaultDataDir } from "@/lib/runtime-paths";
 import {
   detectLibraries,
   detectSubsystems,
@@ -17,7 +18,7 @@ import { chunkProject } from "@/lib/rag/chunker";
 import { embedTexts, chatCompletion, hasLlmConfigured } from "@/lib/llm/provider";
 import type { IndexProgress, ProjectMetadata } from "@/lib/types";
 
-const DATA_DIR = resolve(process.env.DATA_DIR ?? "./data");
+const DATA_DIR = defaultDataDir();
 
 async function setProgress(projectId: string, progress: IndexProgress) {
   await db

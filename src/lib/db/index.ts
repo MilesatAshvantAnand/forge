@@ -3,8 +3,9 @@ import { drizzle as drizzleBetterSqlite3 } from "drizzle-orm/better-sqlite3";
 import { createClient } from "@libsql/client";
 import { drizzle as drizzleLibsql, type LibSQLDatabase } from "drizzle-orm/libsql";
 import { mkdirSync } from "fs";
-import { dirname, resolve } from "path";
+import { dirname } from "path";
 import * as schema from "./schema";
+import { defaultDatabasePath } from "@/lib/runtime-paths";
 
 // Turso (libSQL) is used in production when TURSO_DATABASE_URL is configured.
 // Vercel's serverless functions have an ephemeral, mostly read-only
@@ -124,9 +125,7 @@ if (useTurso) {
   // network round trip for CREATE TABLE IF NOT EXISTS on every boot.
   db = drizzleLibsql(client, { schema });
 } else {
-  const dbPath = resolve(
-    process.env.DATABASE_URL?.replace("file:", "") ?? "./data/forge.db"
-  );
+  const dbPath = defaultDatabasePath();
 
   mkdirSync(dirname(dbPath), { recursive: true });
 

@@ -1,5 +1,6 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "fs";
-import { join, dirname, resolve } from "path";
+import { join, dirname } from "path";
+import { defaultDataDir } from "@/lib/runtime-paths";
 
 /**
  * Resource file storage abstraction.
@@ -10,7 +11,7 @@ import { join, dirname, resolve } from "path";
  * `storagePath` holds the blob URL instead of a filesystem path.
  */
 
-const DATA_DIR = resolve(process.env.DATA_DIR ?? "./data");
+const DATA_DIR = defaultDataDir();
 
 export function blobConfigured(): boolean {
   return Boolean(process.env.BLOB_READ_WRITE_TOKEN);

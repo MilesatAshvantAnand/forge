@@ -4,10 +4,11 @@ import { join, resolve } from "path";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { randomUUID } from "crypto";
+import { defaultDataDir } from "@/lib/runtime-paths";
 
 export const dynamic = "force-dynamic";
 
-const DATA_DIR = resolve(process.env.DATA_DIR ?? "./data");
+const DATA_DIR = defaultDataDir();
 const SAMPLES_DIR = resolve(process.cwd(), "samples");
 const LOG_FILENAME = "log.md";
 
