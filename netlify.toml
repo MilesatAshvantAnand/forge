@@ -1,0 +1,14 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[build.environment]
+  DATA_DIR = "/tmp/forge-data"
+  DATABASE_URL = "file:/tmp/forge-data/forge.db"
+
+# Note: local SQLite does not persist on Netlify serverless.
+# For production, migrate DATABASE_URL to Turso (libSQL) and set
+# TURSO_DATABASE_URL / TURSO_AUTH_TOKEN in the Netlify dashboard.
