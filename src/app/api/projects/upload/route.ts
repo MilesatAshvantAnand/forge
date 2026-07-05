@@ -24,7 +24,8 @@ export async function POST(req: NextRequest) {
   const projectName = file.name.replace(/\.zip$/i, "");
   const now = Date.now();
 
-  db.insert(schema.projects)
+  await db
+    .insert(schema.projects)
     .values({
       id: projectId,
       name: projectName,

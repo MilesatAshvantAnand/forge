@@ -11,12 +11,13 @@ export async function GET(
 ) {
   const { id, rid } = await params;
 
-  const resource = db
+  const resourceRows = await db
     .select()
     .from(schema.resources)
     .where(and(eq(schema.resources.projectId, id), eq(schema.resources.id, rid)))
     .limit(1)
-    .all()[0];
+    .all();
+  const resource = resourceRows[0];
 
   if (!resource) {
     return NextResponse.json({ error: "Resource not found" }, { status: 404 });

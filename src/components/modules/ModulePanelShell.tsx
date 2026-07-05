@@ -6,12 +6,13 @@ import { X, Maximize2, Minimize2 } from "lucide-react";
 interface ModulePanelShellProps {
   eyebrow: string;
   title: string;
-  onClose: () => void;
+  onClose?: () => void;
   expanded?: boolean;
   onToggleExpand?: () => void;
   children: React.ReactNode;
 }
 
+/** Module chrome: fills the main editor column as a primary view; expands to a fullscreen modal on request. */
 export function ModulePanelShell({
   eyebrow,
   title,
@@ -34,7 +35,7 @@ export function ModulePanelShell({
             <button
               type="button"
               onClick={onToggleExpand}
-              className="rounded-lg p-1.5 text-[var(--muted)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+              className="rounded-lg p-2 text-[var(--muted)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
               aria-label={expanded ? "Collapse module" : "Expand module"}
               title={expanded ? "Collapse" : "Expand"}
             >
@@ -45,14 +46,17 @@ export function ModulePanelShell({
               )}
             </button>
           )}
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-lg p-1.5 text-[var(--muted)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
-            aria-label="Close module"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-2 text-[var(--muted)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
+              aria-label="Back to chat"
+              title="Back to chat"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
@@ -82,15 +86,5 @@ export function ModulePanelShell({
     );
   }
 
-  return (
-    <motion.aside
-      initial={{ x: "100%" }}
-      animate={{ x: 0 }}
-      exit={{ x: "100%" }}
-      transition={{ type: "spring", damping: 28, stiffness: 320 }}
-      className="fixed right-0 top-0 z-40 flex h-full w-full max-w-2xl flex-col border-l border-[var(--border)] bg-[var(--surface)] shadow-2xl"
-    >
-      {shell}
-    </motion.aside>
-  );
+  return <div className="flex h-full min-h-0 w-full flex-1 flex-col">{shell}</div>;
 }

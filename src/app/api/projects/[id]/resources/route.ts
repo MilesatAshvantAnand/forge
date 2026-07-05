@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  return NextResponse.json({ resources: listResources(id) });
+  return NextResponse.json({ resources: await listResources(id) });
 }
 
 export async function POST(

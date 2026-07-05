@@ -45,7 +45,7 @@ specifically for VEX, FTC, and FRC teams.
 | Data | Drizzle + SQLite (conversations, resources, RAG chunks) |
 | AI | Qwen (DashScope) chat + embeddings, Exa web grounding, Wispr Flow STT, ElevenLabs TTS |
 | Ingestion | ZIP repository indexer, pdf-parse, markdown/text chunking |
-| Deploy | Netlify (`netlify.toml`; use Turso for the prod DB) |
+| Deploy | Vercel (zero-config Next.js build); Turso (libSQL) for the prod DB |
 
 ## Getting started
 
@@ -60,6 +60,41 @@ bundled at `samples/sample-robot.zip`.
 
 Without API keys, indexing, project understanding, and keyword retrieval all
 work — only AI conversation requires a key.
+
+## Deploying to Vercel
+
+Forge builds on Vercel with zero extra config (`next build` / `next start`,
+detected automatically). Two things matter for production:
+
+1. **Database.** Vercel's serverless functions have an ephemeral filesystem,
+   so the default local `better-sqlite3` file does **not** persist across
+   requests or deployments. Set `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN`
+   in the Vercel project's environment variables to switch to
+   [Turso](https://turso.tech) (libSQL) — `src/lib/db/index.ts` picks the
+   driver automatically based on whether `TURSO_DATABASE_URL` is set, so
+   local dev (`npm run dev`) is unaffected. After creating a Turso database,
+   run the one-time schema setup once against it:
+
+   ```bash
+   TURSO_DATABASE_URL=... TURSO_AUTH_TOKEN=... npm run db:push:turso
+   ```
+
+   Without Turso configured, the app still builds and runs on Vercel, but
+   data will not reliably persist across cold starts/deployments.
+
+2. **File uploads.** Ingested resources (PDFs, notebooks, ZIPs, CAD files)
+   are currently written to a local `data/` directory
+   (`src/lib/resources/ingest.ts`, `src/lib/indexer/pipeline.ts`). This has
+   the same ephemeral-filesystem caveat as the database — uploaded files
+   won't survive across serverless invocations on Vercel. This is a known
+   limitation; migrating to an object store (e.g.
+   [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)) is recommended
+   as a follow-up.
+
+Required environment variables are listed in `.env.example`. At minimum, set
+`DASHSCOPE_API_KEY` (chat) in the Vercel dashboard for AI conversation to
+work; `EXA_API_KEY`, `WISPR_FLOW_API_KEY`, and `ELEVENLABS_API_KEY` are
+optional feature enhancers.
 
 ## Architecture
 

@@ -91,12 +91,12 @@ export function AutonomousPlannerModule({
       expanded={expanded}
       onToggleExpand={onToggleExpand}
     >
-      <div className="flex flex-col gap-5 px-5 py-6">
+      <div className="mx-auto flex max-w-3xl flex-col gap-6 px-8 py-8">
         <FieldMap routines={displayRoutines} />
 
-        <div className="card p-4">
-          <p className="section-label">Path.jerryio import</p>
-          <p className="mt-1 text-xs text-[var(--muted)]">
+        <div className="card p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">Path.jerryio import</p>
+          <p className="mt-1.5 text-sm text-[var(--muted)]">
             Import a .jerryio path file to visualize waypoints and generate PROS/LemLib routines.
           </p>
           <input
@@ -113,24 +113,24 @@ export function AutonomousPlannerModule({
           <button
             type="button"
             onClick={() => fileRef.current?.click()}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-strong)] py-4 text-sm transition-colors hover:border-[var(--accent)] hover:bg-[var(--inset)]"
+            className="mt-4 flex w-full items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-strong)] py-5 text-base font-medium transition-colors hover:border-[var(--accent)] hover:bg-[var(--inset)]"
           >
-            <Upload className="h-4 w-4 text-[var(--accent)]" />
+            <Upload className="h-5 w-5 text-[var(--accent)]" />
             {jerryFile ?? "Import .jerryio file"}
           </button>
           {jerryFile && (
-            <p className="mt-2 text-xs text-[var(--green)]">
+            <p className="mt-2 text-sm text-[var(--green)]">
               Loaded {jerryFile} — ask Forge to generate the matching auton routine
             </p>
           )}
         </div>
 
-        <div className="card p-4">
+        <div className="card p-5">
           <div className="flex items-center gap-2">
-            <Search className="h-3.5 w-3.5 text-[var(--blue)]" />
-            <p className="section-label">VEX parts lookup · Exa</p>
+            <Search className="h-4 w-4 text-[var(--blue)]" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">VEX parts lookup · Exa</p>
           </div>
-          <p className="mt-1 text-xs text-[var(--muted)]">
+          <p className="mt-1.5 text-sm text-[var(--muted)]">
             Hit a building challenge? Search vexrobotics.com competition products.
           </p>
           <div className="mt-3 flex gap-2">
@@ -139,19 +139,19 @@ export function AutonomousPlannerModule({
               onChange={(e) => setPartsQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && searchParts()}
               placeholder="e.g. flex wheel intake 4 inch"
-              className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-sm outline-none focus:border-[var(--blue)]"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-transparent px-3 py-2.5 text-sm outline-none focus:border-[var(--blue)]"
             />
             <button
               type="button"
               onClick={searchParts}
               disabled={searching}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--blue-dim)] px-3 py-2 text-sm font-medium text-[var(--blue)] ring-1 ring-[var(--blue)]/25 disabled:opacity-50"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--blue-dim)] px-4 py-2.5 text-sm font-semibold text-[var(--blue)] ring-1 ring-[var(--blue)]/25 disabled:opacity-50"
             >
               {searching ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />}
               Search
             </button>
           </div>
-          {searchError && <p className="mt-2 text-xs text-[var(--red)]">{searchError}</p>}
+          {searchError && <p className="mt-2 text-sm text-[var(--red)]">{searchError}</p>}
           {partsResults.length > 0 && (
             <div className="mt-3 flex flex-col gap-2">
               {partsResults.map((r) => (
@@ -160,19 +160,19 @@ export function AutonomousPlannerModule({
                   href={r.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="glass flex items-start gap-2 rounded-lg px-3 py-2 transition-colors hover:border-[var(--blue)]"
+                  className="glass flex items-start gap-2 rounded-lg px-3 py-2.5 transition-colors hover:border-[var(--blue)]"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-[var(--foreground)]">
+                    <p className="truncate text-base font-semibold text-[var(--foreground)]">
                       {r.title}
                     </p>
                     {r.highlights[0] && (
-                      <p className="mt-0.5 line-clamp-2 text-xs text-[var(--muted)]">
+                      <p className="mt-0.5 line-clamp-2 text-sm text-[var(--muted)]">
                         {r.highlights[0]}
                       </p>
                     )}
                   </div>
-                  <ExternalLink className="h-3.5 w-3.5 shrink-0 text-[var(--blue)]" />
+                  <ExternalLink className="h-4 w-4 shrink-0 text-[var(--blue)]" />
                 </a>
               ))}
             </div>
@@ -181,8 +181,8 @@ export function AutonomousPlannerModule({
 
         <div>
           <div className="flex items-center gap-2">
-            <Route className="h-3.5 w-3.5 text-[var(--muted)]" />
-            <p className="section-label">Detected routines</p>
+            <Route className="h-4 w-4 text-[var(--muted)]" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">Detected routines</p>
           </div>
           <div className="mt-3 flex flex-col gap-1.5">
             {displayRoutines.map((r) => (
@@ -190,14 +190,14 @@ export function AutonomousPlannerModule({
                 key={r.name}
                 type="button"
                 onClick={() => onSelectFile?.(r.file)}
-                className="glass flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:border-[var(--border-strong)]"
+                className="glass flex items-center gap-3 rounded-lg px-3 py-3 text-left transition-colors hover:border-[var(--border-strong)]"
               >
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: r.color }} />
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: r.color }} />
                 <div className="min-w-0 flex-1">
-                  <p className="font-mono text-sm">{r.name}()</p>
-                  <p className="truncate text-xs text-[var(--muted)]">{r.points}</p>
+                  <p className="font-mono text-base">{r.name}()</p>
+                  <p className="truncate text-sm text-[var(--muted)]">{r.points}</p>
                 </div>
-                <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--muted)]" />
+                <ChevronRight className="h-4 w-4 shrink-0 text-[var(--muted)]" />
               </button>
             ))}
           </div>

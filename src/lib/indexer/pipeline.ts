@@ -19,8 +19,9 @@ import type { IndexProgress, ProjectMetadata } from "@/lib/types";
 
 const DATA_DIR = resolve(process.env.DATA_DIR ?? "./data");
 
-function setProgress(projectId: string, progress: IndexProgress) {
-  db.update(schema.projects)
+async function setProgress(projectId: string, progress: IndexProgress) {
+  await db
+    .update(schema.projects)
     .set({
       indexProgress: JSON.stringify(progress),
       status: progress.progress >= 100 ? "ready" : "indexing",
@@ -36,7 +37,7 @@ export async function runIndexingPipeline(
   zipBuffer: Buffer
 ): Promise<void> {
   try {
-    setProgress(projectId, {
+    await setProgress(projectId, {
       stage: "extract",
       progress: 5,
       message: "Extracting repository...",
@@ -49,7 +50,7 @@ export async function runIndexingPipeline(
       throw new Error("No readable source files found in the ZIP");
     }
 
-    setProgress(projectId, {
+    await setProgress(projectId, {
       stage: "walk",
       progress: 20,
       message: `Reading ${extracted.length} files...`,
@@ -65,10 +66,10 @@ export async function runIndexingPipeline(
       content: f.content,
     }));
     for (const row of fileRows) {
-      db.insert(schema.files).values(row).run();
+      await db.insert(schema.files).values(row).run();
     }
 
-    setProgress(projectId, {
+    await setProgress(projectId, {
       stage: "analyze",
       progress: 35,
       message: "Detecting libraries, subsystems, and PID controllers...",
@@ -102,12 +103,13 @@ export async function runIndexingPipeline(
       languages,
     };
 
-    db.update(schema.projects)
+    await db
+      .update(schema.projects)
       .set({ metadata: JSON.stringify(metadata), updatedAt: Date.now() })
       .where(eq(schema.projects.id, projectId))
       .run();
 
-    setProgress(projectId, {
+    await setProgress(projectId, {
       stage: "chunk",
       progress: 55,
       message: "Chunking code for retrieval...",
@@ -125,7 +127,7 @@ export async function runIndexingPipeline(
     }));
 
     if (hasLlmConfigured()) {
-      setProgress(projectId, {
+      await setProgress(projectId, {
         stage: "embed",
         progress: 65,
         message: `Embedding ${chunkRows.length} chunks with Qwen...`,
@@ -143,10 +145,10 @@ export async function runIndexingPipeline(
     }
 
     for (const row of chunkRows) {
-      db.insert(schema.chunks).values(row).run();
+      await db.insert(schema.chunks).values(row).run();
     }
 
-    setProgress(projectId, {
+    await setProgress(projectId, {
       stage: "summary",
       progress: 85,
       message: "Generating architecture summary...",
@@ -162,7 +164,8 @@ export async function runIndexingPipeline(
     }
 
     // Register the repository itself as the project's first context resource
-    db.insert(schema.resources)
+    await db
+      .insert(schema.resources)
       .values({
         id: randomUUID(),
         projectId,
@@ -176,7 +179,8 @@ export async function runIndexingPipeline(
       })
       .run();
 
-    db.update(schema.projects)
+    await db
+      .update(schema.projects)
       .set({
         summary,
         status: "ready",
@@ -191,7 +195,8 @@ export async function runIndexingPipeline(
       .run();
   } catch (err) {
     console.error("Indexing failed:", err);
-    db.update(schema.projects)
+    await db
+      .update(schema.projects)
       .set({
         status: "error",
         indexProgress: JSON.stringify({

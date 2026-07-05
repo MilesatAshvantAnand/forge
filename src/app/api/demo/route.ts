@@ -20,15 +20,21 @@ const DEMO_ASSETS: { file: string }[] = [
   { file: "build-log.md" },
   { file: "v5rc-override-1.0-2.pdf" },
   { file: "vex-engineering-book-25-26.pptx" },
+  { file: "odometry-with-rotation-sensors-vex-v5.docx" },
+  { file: "pid-how-to-pid-4ed.pdf" },
+  { file: "pid-introduction-to-pid-controllers-ed2.pdf" },
+  { file: "pid-vexpidteam.pdf" },
+  { file: "pid-without-a-phd.pdf" },
 ];
 
-function findDemoProject() {
-  return db
+async function findDemoProject() {
+  const rows = await db
     .select()
     .from(schema.projects)
     .where(eq(schema.projects.name, DEMO_PROJECT_NAME))
     .limit(1)
-    .all()[0];
+    .all();
+  return rows[0];
 }
 
 async function ingestDemoAssets(projectId: string) {
@@ -46,7 +52,7 @@ async function ingestDemoAssets(projectId: string) {
 
 /** Find or create the pre-indexed demo project */
 export async function POST() {
-  const existing = findDemoProject();
+  const existing = await findDemoProject();
 
   if (existing?.status === "ready") {
     return NextResponse.json({ projectId: existing.id, ready: true });
@@ -67,7 +73,8 @@ export async function POST() {
   const now = Date.now();
 
   if (!existing) {
-    db.insert(schema.projects)
+    await db
+      .insert(schema.projects)
       .values({
         id: projectId,
         name: DEMO_PROJECT_NAME,
@@ -83,7 +90,8 @@ export async function POST() {
       })
       .run();
   } else {
-    db.update(schema.projects)
+    await db
+      .update(schema.projects)
       .set({
         status: "indexing",
         indexProgress: JSON.stringify({
@@ -107,7 +115,7 @@ export async function POST() {
 }
 
 export async function GET() {
-  const existing = findDemoProject();
+  const existing = await findDemoProject();
 
   if (!existing) {
     return NextResponse.json({ exists: false });

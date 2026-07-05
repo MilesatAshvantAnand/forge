@@ -15,7 +15,7 @@ export async function GET(
     return NextResponse.json({ error: "path query param required" }, { status: 400 });
   }
 
-  const row = db
+  const row = await db
     .select()
     .from(schema.files)
     .where(and(eq(schema.files.projectId, id), eq(schema.files.path, path)))

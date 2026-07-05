@@ -122,16 +122,16 @@ export function OnshapeCadModule({
       expanded={expanded}
       onToggleExpand={onToggleExpand}
     >
-      <div className="flex flex-col px-5 py-6">
-        <div className="rounded-xl border border-[var(--border)] bg-[var(--inset)] p-4">
-          <p className="text-[10px] font-medium uppercase tracking-widest text-[var(--muted)]">
+      <div className="mx-auto flex max-w-3xl flex-col px-8 py-8">
+        <div className="rounded-xl border border-[var(--border)] bg-[var(--inset)] p-5">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
             Connect Onshape
           </p>
-          <p className="mt-1.5 text-xs leading-relaxed text-[var(--muted)]">
+          <p className="mt-2 text-sm leading-relaxed text-[var(--muted)]">
             Paste your Onshape document URL or upload an exported assembly (.STEP, .STL).
           </p>
 
-          <div className="mt-3 flex gap-2">
+          <div className="mt-4 flex gap-2">
             <input
               type="url"
               value={onshapeUrl}
@@ -140,26 +140,26 @@ export function OnshapeCadModule({
                 setConnectError(null);
               }}
               placeholder="https://cad.onshape.com/documents/…"
-              className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-transparent px-3 py-2 text-xs outline-none placeholder:text-[var(--muted)]/60 focus:border-[var(--blue)]"
+              className="min-w-0 flex-1 rounded-lg border border-[var(--border)] bg-transparent px-3 py-2.5 text-sm outline-none placeholder:text-[var(--muted)]/60 focus:border-[var(--blue)]"
             />
             <button
               type="button"
               onClick={handleConnect}
               disabled={connecting || !onshapeUrl.trim()}
-              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--blue)] px-3 py-2 text-xs font-medium text-black transition-opacity disabled:opacity-40"
+              className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[var(--blue)] px-4 py-2.5 text-sm font-semibold text-black transition-opacity disabled:opacity-40"
             >
               {connecting ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : connectSuccess ? (
-                <Check className="h-3.5 w-3.5" />
+                <Check className="h-4 w-4" />
               ) : (
-                <Link2 className="h-3.5 w-3.5" />
+                <Link2 className="h-4 w-4" />
               )}
               Link
             </button>
           </div>
           {connectError && (
-            <p className="mt-2 text-[10px] text-red-400">{connectError}</p>
+            <p className="mt-2 text-xs text-red-400">{connectError}</p>
           )}
 
           <input
@@ -177,38 +177,38 @@ export function OnshapeCadModule({
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
-            className="mt-3 flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-strong)] py-6 transition-colors hover:border-[var(--blue)] hover:bg-[var(--inset)] disabled:opacity-60"
+            className="mt-4 flex w-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-[var(--border-strong)] py-7 transition-colors hover:border-[var(--blue)] hover:bg-[var(--inset)] disabled:opacity-60"
           >
             {uploading ? (
-              <Loader2 className="h-6 w-6 animate-spin text-[var(--blue)]" />
+              <Loader2 className="h-7 w-7 animate-spin text-[var(--blue)]" />
             ) : (
-              <Upload className="h-6 w-6 text-[var(--blue)] opacity-80" />
+              <Upload className="h-7 w-7 text-[var(--blue)] opacity-80" />
             )}
-            <span className="text-xs font-medium">
+            <span className="text-sm font-semibold">
               {uploading ? "Uploading…" : "Upload CAD export"}
             </span>
-            <span className="text-[10px] text-[var(--muted)]">STEP · STL · IGES · OBJ</span>
+            <span className="text-xs text-[var(--muted)]">STEP · STL · IGES · OBJ</span>
           </button>
         </div>
 
         {cadResources.length > 0 && (
-          <div className="mt-4">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-[var(--muted)]">
+          <div className="mt-5">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
               Linked CAD
             </p>
-            <div className="mt-2 flex flex-col gap-1">
+            <div className="mt-2 flex flex-col gap-1.5">
               {cadResources.map((r) => {
                 const isUrl = r.summary?.startsWith("http");
                 return (
                   <div
                     key={r.id}
-                    className="glass flex items-center gap-2 rounded-lg px-3 py-2"
+                    className="glass flex items-center gap-2 rounded-lg px-3 py-2.5 transition-transform duration-200 ease-out will-change-transform hover:scale-[1.03] hover:shadow-lg"
                   >
-                    <Box className="h-3.5 w-3.5 shrink-0 text-[var(--blue)]" />
+                    <Box className="h-4 w-4 shrink-0 text-[var(--blue)]" />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs">{r.name}</p>
+                      <p className="truncate text-sm">{r.name}</p>
                       {r.size > 0 && (
-                        <p className="text-[10px] text-[var(--muted)]">
+                        <p className="text-xs text-[var(--muted)]">
                           {formatBytes(r.size)}
                         </p>
                       )}
@@ -221,7 +221,7 @@ export function OnshapeCadModule({
                         className="shrink-0 rounded p-1 text-[var(--muted)] hover:text-[var(--blue)]"
                         title="Open in Onshape"
                       >
-                        <ExternalLink className="h-3.5 w-3.5" />
+                        <ExternalLink className="h-4 w-4" />
                       </a>
                     )}
                   </div>
@@ -231,10 +231,10 @@ export function OnshapeCadModule({
           </div>
         )}
 
-        <div className="mt-4 flex h-28 items-center justify-center rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--inset)]">
+        <div className="mt-5 flex h-32 items-center justify-center rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--inset)]">
           <div className="text-center">
-            <Box className="mx-auto h-8 w-8 text-[var(--blue)] opacity-70" />
-            <p className="mt-2 text-[10px] text-[var(--muted)]">
+            <Box className="mx-auto h-9 w-9 text-[var(--blue)] opacity-70" />
+            <p className="mt-2 text-xs text-[var(--muted)]">
               {cadResources.length > 0
                 ? "3D preview · coming with live Onshape sync"
                 : "Connect or upload to preview assembly"}
@@ -243,8 +243,8 @@ export function OnshapeCadModule({
         </div>
 
         {showDemoChain ? (
-          <div className="mt-6 flex flex-col items-center">
-            <p className="mb-3 text-center text-xs text-[var(--muted)]">
+          <div className="mt-7 flex flex-col items-center">
+            <p className="mb-3 text-center text-sm text-[var(--muted)]">
               Forge links mechanical design to code and documentation
             </p>
             {DEMO_CHAIN.map((item, i) => (
@@ -253,20 +253,21 @@ export function OnshapeCadModule({
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.1 + i * 0.12 }}
-                  className="glass w-full rounded-xl px-4 py-3"
+                  whileHover={{ scale: 1.03, transition: { duration: 0.2, ease: "easeOut" } }}
+                  className="glass w-full rounded-xl px-4 py-3.5 transition-shadow duration-200 ease-out will-change-transform hover:shadow-lg"
                 >
                   <div className="flex items-center gap-3">
                     <div
-                      className="flex h-9 w-9 items-center justify-center rounded-lg"
+                      className="flex h-10 w-10 items-center justify-center rounded-lg"
                       style={{
                         background: `color-mix(in srgb, ${item.color} 15%, transparent)`,
                       }}
                     >
-                      <item.icon className="h-4 w-4" style={{ color: item.color }} />
+                      <item.icon className="h-5 w-5" style={{ color: item.color }} />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">{item.label}</p>
-                      <p className="text-xs text-[var(--muted)]">{item.sub}</p>
+                      <p className="text-base font-semibold">{item.label}</p>
+                      <p className="text-sm text-[var(--muted)]">{item.sub}</p>
                     </div>
                   </div>
                 </motion.div>
@@ -277,12 +278,12 @@ export function OnshapeCadModule({
             ))}
           </div>
         ) : (
-          <div className="mt-6">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-[var(--muted)]">
+          <div className="mt-7">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
               Detected subsystems
             </p>
             {subsystems.length === 0 ? (
-              <p className="mt-3 text-xs text-[var(--muted)]">
+              <p className="mt-3 text-sm text-[var(--muted)]">
                 Index your repository first — Forge will suggest CAD assembly mappings from
                 subsystem names.
               </p>
@@ -293,10 +294,10 @@ export function OnshapeCadModule({
                     key={s.name}
                     type="button"
                     onClick={() => s.files[0] && onSelectFile?.(s.files[0])}
-                    className="glass flex items-center justify-between rounded-lg px-3 py-2 text-left transition-colors hover:border-[var(--border-strong)]"
+                    className="glass flex items-center justify-between rounded-lg px-3 py-2.5 text-left transition-all duration-200 ease-out will-change-transform hover:scale-[1.03] hover:border-[var(--border-strong)] hover:shadow-lg"
                   >
-                    <span className="text-xs capitalize">{s.name}</span>
-                    <span className="text-[10px] text-[var(--muted)]">
+                    <span className="text-sm capitalize">{s.name}</span>
+                    <span className="text-xs text-[var(--muted)]">
                       {s.files.length} files
                     </span>
                   </button>

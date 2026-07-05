@@ -110,8 +110,9 @@ export async function ingestResource(
         }
       }
 
-      rows.forEach((row, i) => {
-        db.insert(schema.chunks)
+      for (const [i, row] of rows.entries()) {
+        await db
+          .insert(schema.chunks)
           .values({
             ...row,
             projectId,
@@ -119,11 +120,12 @@ export async function ingestResource(
             sourceType: "resource",
           })
           .run();
-      });
+      }
     }
   }
 
-  db.insert(schema.resources)
+  await db
+    .insert(schema.resources)
     .values({
       id: resourceId,
       projectId,
@@ -137,7 +139,8 @@ export async function ingestResource(
     })
     .run();
 
-  db.update(schema.projects)
+  await db
+    .update(schema.projects)
     .set({ updatedAt: Date.now() })
     .where(eq(schema.projects.id, projectId))
     .run();
@@ -145,7 +148,7 @@ export async function ingestResource(
   return { resourceId, type, indexedChunks };
 }
 
-export function listResources(projectId: string) {
+export async function listResources(projectId: string) {
   return db
     .select({
       id: schema.resources.id,

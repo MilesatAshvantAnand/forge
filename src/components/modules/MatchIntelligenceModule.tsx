@@ -65,46 +65,46 @@ export function MatchIntelligenceModule({
       expanded={expanded}
       onToggleExpand={onToggleExpand}
     >
-      <div className="flex flex-col px-5 py-6">
+      <div className="mx-auto flex max-w-3xl flex-col px-8 py-8">
         <div className="flex aspect-video items-center justify-center rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--inset)]">
           {selectedId || showDemoTimeline ? (
             <div className="text-center">
-              <Play className="mx-auto h-10 w-10 text-[var(--accent)] opacity-80" />
-              <p className="mt-2 text-xs text-[var(--muted)]">
+              <Play className="mx-auto h-12 w-12 text-[var(--accent)] opacity-80" />
+              <p className="mt-3 text-sm text-[var(--muted)]">
                 {showDemoTimeline ? "Sample match timeline" : "Video preview"}
               </p>
             </div>
           ) : (
             <div className="text-center px-6">
-              <Film className="mx-auto h-10 w-10 text-[var(--muted)] opacity-60" />
-              <p className="mt-2 text-xs text-[var(--muted)]">Attach match footage to analyze</p>
+              <Film className="mx-auto h-12 w-12 text-[var(--muted)] opacity-60" />
+              <p className="mt-3 text-sm text-[var(--muted)]">Attach match footage to analyze</p>
             </div>
           )}
         </div>
 
         {videos.length > 0 ? (
-          <div className="mt-4 flex flex-col gap-1">
+          <div className="mt-5 flex flex-col gap-1">
             {videos.map((v) => (
               <button
                 key={v.id}
                 type="button"
                 onClick={() => setSelectedId(v.id)}
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-left text-xs transition-colors ${
+                className={`flex items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm transition-colors ${
                   selectedId === v.id
                     ? "bg-[var(--accent-dim)] text-[var(--accent)]"
                     : "text-[var(--muted)] hover:bg-[var(--hover)]"
                 }`}
               >
-                <Film className="h-3.5 w-3.5 shrink-0" />
+                <Film className="h-4 w-4 shrink-0" />
                 <span className="truncate">{v.name}</span>
-                <span className="ml-auto shrink-0 text-[10px] opacity-70">
+                <span className="ml-auto shrink-0 text-xs opacity-70">
                   {formatBytes(v.size)}
                 </span>
               </button>
             ))}
           </div>
         ) : (
-          <div className="mt-4">
+          <div className="mt-5">
             <input
               ref={fileRef}
               type="file"
@@ -120,22 +120,22 @@ export function MatchIntelligenceModule({
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border)] py-2.5 text-xs font-medium transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
+              className="flex w-full items-center justify-center gap-2 rounded-lg border border-[var(--border)] py-3 text-sm font-semibold transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
             >
               {uploading ? (
-                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
-                <Paperclip className="h-3.5 w-3.5" />
+                <Paperclip className="h-4 w-4" />
               )}
               Upload match footage
             </button>
           </div>
         )}
 
-        <div className="mt-6">
+        <div className="mt-7">
           <div className="flex items-center gap-2">
-            <Clock className="h-3.5 w-3.5 text-[var(--muted)]" />
-            <p className="text-[10px] font-medium uppercase tracking-widest text-[var(--muted)]">
+            <Clock className="h-4 w-4 text-[var(--muted)]" />
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
               Failure timeline
             </p>
           </div>
@@ -143,14 +143,14 @@ export function MatchIntelligenceModule({
             {(showDemoTimeline ? DEMO_TIMELINE : []).map((event) => (
               <div
                 key={event.t}
-                className="glass flex items-start gap-3 rounded-lg px-3 py-2.5"
+                className="glass flex items-start gap-3 rounded-lg px-3 py-3"
               >
-                <span className="font-mono text-[10px] text-[var(--accent)]">{event.t}</span>
+                <span className="font-mono text-xs text-[var(--accent)]">{event.t}</span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-xs">{event.label}</p>
+                  <p className="text-sm">{event.label}</p>
                 </div>
                 <AlertTriangle
-                  className="h-3.5 w-3.5 shrink-0"
+                  className="h-4 w-4 shrink-0"
                   style={{
                     color:
                       event.severity === "high"
@@ -163,7 +163,7 @@ export function MatchIntelligenceModule({
               </div>
             ))}
             {!showDemoTimeline && videos.length > 0 && (
-              <p className="text-xs text-[var(--muted)]">
+              <p className="text-sm text-[var(--muted)]">
                 Forge will surface timestamps and failure hypotheses once video indexing is
                 enabled for this project.
               </p>

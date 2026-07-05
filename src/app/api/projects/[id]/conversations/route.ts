@@ -10,7 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const rows = db
+  const rows = await db
     .select()
     .from(schema.conversations)
     .where(eq(schema.conversations.projectId, id))
@@ -33,6 +33,6 @@ export async function POST(
     createdAt: now,
     updatedAt: now,
   };
-  db.insert(schema.conversations).values(conversation).run();
+  await db.insert(schema.conversations).values(conversation).run();
   return NextResponse.json({ conversation });
 }

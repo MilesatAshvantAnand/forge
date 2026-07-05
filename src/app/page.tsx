@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
+import { LogoCarousel } from "@/components/home/LogoCarousel";
 
 interface ProjectCard {
   id: string;
@@ -116,6 +117,10 @@ export default function HomePage() {
         transition={{ delay: 0.06 }}
         className="mt-14"
       >
+        <div className="mb-4 inline-flex w-fit items-center gap-1.5 rounded-full border border-[var(--accent)]/30 bg-[var(--accent-dim)] px-3 py-1 text-sm font-medium text-[var(--accent)]">
+          <Flame className="h-3.5 w-3.5" />
+          Built for VEX &amp; FIRST Robotics teams
+        </div>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
           The AI Engineering Workspace
           <br />
@@ -202,6 +207,20 @@ export default function HomePage() {
       </p>
 
       {error && <p className="mt-4 text-center text-xs text-red-400">{error}</p>}
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.36 }}
+        className="mt-16"
+      >
+        <p className="text-center text-xs text-[var(--muted)]">
+          Powered by industry-leading technology
+        </p>
+        <div className="mt-4">
+          <LogoCarousel />
+        </div>
+      </motion.div>
 
       {projects && projects.length > 0 && (
         <section className="mt-16">

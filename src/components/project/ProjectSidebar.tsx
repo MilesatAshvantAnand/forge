@@ -14,10 +14,6 @@ import {
   Paperclip,
   Loader2,
   Box,
-  BookOpen,
-  Film,
-  Route,
-  ScrollText,
 } from "lucide-react";
 import { cn, formatBytes } from "@/lib/utils";
 import { FORGE_MODULES, type ForgeModuleId } from "@/lib/modules/types";
@@ -36,14 +32,6 @@ export interface ResourceItem {
   size: number;
   summary?: string | null;
 }
-
-const MODULE_ICONS: Record<ForgeModuleId, typeof Box> = {
-  "onshape-cad": Box,
-  "engineering-notebook": BookOpen,
-  "build-log": ScrollText,
-  "match-intelligence": Film,
-  "autonomous-planner": Route,
-};
 
 const RESOURCE_ICONS: Record<string, typeof File> = {
   repository: FolderGit2,
@@ -108,36 +96,36 @@ export function ProjectSidebar({
   };
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)]">
-      <div className="flex items-center gap-2 px-4 py-3.5">
-        <Link href="/" className="flex min-w-0 flex-1 items-center gap-1.5">
-          <Flame className="h-4 w-4 shrink-0 text-[var(--accent)]" />
-          <span className="text-xs font-semibold tracking-tight">Forge</span>
+    <aside className="flex h-full w-72 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--surface)]">
+      <div className="flex items-center gap-2 px-4 py-4">
+        <Link href="/" className="flex min-w-0 flex-1 items-center gap-2">
+          <Flame className="h-5 w-5 shrink-0 text-[var(--accent)]" />
+          <span className="text-sm font-semibold tracking-tight">Forge</span>
         </Link>
         <ThemeToggle />
       </div>
       <div className="flex items-center gap-1 px-4 pb-2">
         <span className="text-[var(--muted)]">/</span>
-        <span className="truncate text-xs font-medium">{projectName}</span>
+        <span className="truncate text-sm font-medium">{projectName}</span>
       </div>
 
       <div className="px-3">
         <button
           onClick={onNewConversation}
-          className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2 text-xs font-medium transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          className="flex w-full items-center gap-2 rounded-lg border border-[var(--border)] px-3 py-2.5 text-sm font-medium transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="h-4 w-4" />
           New conversation
         </button>
       </div>
 
       <div className="mt-4 min-h-0 flex-1 overflow-y-auto px-3">
-        <p className="px-1 pb-1.5 text-[10px] font-medium uppercase tracking-widest text-[var(--muted)]">
+        <p className="px-1 pb-1.5 text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
           Conversations
         </p>
         <div className="flex flex-col gap-0.5">
           {conversations.length === 0 && (
-            <p className="px-1 py-2 text-xs text-[var(--muted)]">
+            <p className="px-1 py-2 text-sm text-[var(--muted)]">
               No conversations yet
             </p>
           )}
@@ -146,13 +134,13 @@ export function ProjectSidebar({
               key={c.id}
               onClick={() => onSelectConversation(c.id)}
               className={cn(
-                "flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors",
+                "flex items-center gap-2 rounded-lg px-2 py-2 text-left text-sm transition-colors",
                 c.id === activeConversationId
                   ? "bg-[var(--accent-dim)] text-[var(--accent)]"
                   : "text-[var(--muted)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
               )}
             >
-              <MessageSquare className="h-3 w-3 shrink-0" />
+              <MessageSquare className="h-3.5 w-3.5 shrink-0" />
               <span className="truncate">{c.title}</span>
             </button>
           ))}
@@ -160,7 +148,7 @@ export function ProjectSidebar({
 
         <div className="mt-6">
           <div className="flex items-center justify-between px-1 pb-1.5">
-            <p className="text-[10px] font-medium uppercase tracking-widest text-[var(--muted)]">
+            <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
               Project context
             </p>
             <button
@@ -170,9 +158,9 @@ export function ProjectSidebar({
               className="rounded p-1 text-[var(--muted)] transition-colors hover:bg-[var(--hover)] hover:text-[var(--accent)]"
             >
               {uploading ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
               ) : (
-                <Paperclip className="h-3 w-3" />
+                <Paperclip className="h-3.5 w-3.5" />
               )}
             </button>
             <input
@@ -193,31 +181,34 @@ export function ProjectSidebar({
               return (
                 <div
                   key={r.id}
-                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs text-[var(--muted)]"
+                  className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm text-[var(--muted)]"
                   title={`${r.type} · ${formatBytes(r.size)}`}
                 >
-                  <Icon className="h-3 w-3 shrink-0 text-[var(--accent)]" />
+                  <Icon className="h-3.5 w-3.5 shrink-0 text-[var(--accent)]" />
                   <span className="truncate">{r.name}</span>
                 </div>
               );
             })}
           </div>
           {uploadError && (
-            <p className="px-1 pt-1 text-[10px] text-red-400">{uploadError}</p>
+            <p className="px-1 pt-1 text-xs text-red-400">{uploadError}</p>
           )}
-          <p className="px-1 pt-2 text-[10px] leading-relaxed text-[var(--muted)]/70">
+          <p className="px-1 pt-2 text-xs leading-relaxed text-[var(--muted)]/70">
             Attach notebooks, PDFs, photos, and match footage. Forge folds them
             into every conversation.
           </p>
         </div>
 
         <div className="mt-6 pb-4">
-          <p className="px-1 pb-1.5 text-[10px] font-medium uppercase tracking-widest text-[var(--muted)]">
+          <p className="px-1 pb-1.5 text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
             Modules
+          </p>
+          <p className="px-1 pb-2 text-xs leading-relaxed text-[var(--muted)]/70">
+            Open as a main view alongside Chat and Editor.
           </p>
           <div className="flex flex-col gap-0.5">
             {FORGE_MODULES.map((m) => {
-              const Icon = MODULE_ICONS[m.id];
+              const Icon = m.icon;
               const isActive = activeModule === m.id;
               return (
                 <button
@@ -226,13 +217,13 @@ export function ProjectSidebar({
                   onClick={() => onSelectModule(isActive ? null : m.id)}
                   title={m.description}
                   className={cn(
-                    "flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-xs transition-colors",
+                    "flex items-center gap-2.5 rounded-lg px-2 py-2 text-left text-sm font-medium transition-colors",
                     isActive
                       ? "bg-[var(--accent-dim)] text-[var(--accent)]"
                       : "text-[var(--muted)] hover:bg-[var(--hover)] hover:text-[var(--foreground)]"
                   )}
                 >
-                  <Icon className="h-3 w-3 shrink-0" />
+                  <Icon className="h-4 w-4 shrink-0" />
                   <span className="truncate">{m.label}</span>
                 </button>
               );

@@ -55,15 +55,16 @@ export async function POST(
   const block = `\n## ${stamp}\n\n${entry}\n`;
   writeFileSync(path, readFileSync(path, "utf-8") + block, "utf-8");
 
-  const existing = db
+  const existingRows = await db
     .select()
     .from(schema.resources)
     .where(eq(schema.resources.projectId, id))
-    .all()
-    .find((r) => r.name === LOG_FILENAME);
+    .all();
+  const existing = existingRows.find((r) => r.name === LOG_FILENAME);
 
   if (!existing) {
-    db.insert(schema.resources)
+    await db
+      .insert(schema.resources)
       .values({
         id: randomUUID(),
         projectId: id,
@@ -77,7 +78,8 @@ export async function POST(
       })
       .run();
   } else {
-    db.update(schema.resources)
+    await db
+      .update(schema.resources)
       .set({
         size: readFileSync(path).length,
         summary: entry.slice(0, 200),

@@ -6,10 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:push:turso": "node scripts/init-turso-db.mjs"
   },
   "dependencies": {
     "@fal-ai/client": "^1.10.1",
+    "@libsql/client": "^0.17.4",
     "@xyflow/react": "^12.11.1",
     "better-sqlite3": "^12.11.1",
     "class-variance-authority": "^0.7.1",

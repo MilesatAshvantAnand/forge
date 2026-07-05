@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const row = db
+  const row = await db
     .select({
       status: schema.projects.status,
       indexProgress: schema.projects.indexProgress,

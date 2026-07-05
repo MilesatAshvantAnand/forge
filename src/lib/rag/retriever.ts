@@ -27,7 +27,7 @@ export async function retrieveChunks(
   query: string,
   topK = 8
 ): Promise<RetrievedChunk[]> {
-  const rows = db
+  const rows = await db
     .select()
     .from(schema.chunks)
     .where(eq(schema.chunks.projectId, projectId))

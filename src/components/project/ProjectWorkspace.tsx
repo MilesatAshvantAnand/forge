@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AnimatePresence } from "framer-motion";
 import { AlertCircle } from "lucide-react";
 import type { IndexProgress, ProjectMetadata, ProjectStatus } from "@/lib/types";
 import { IndexingOverlay } from "@/components/workspace/IndexingOverlay";
@@ -19,7 +18,6 @@ import { DemoTour, DEMO_PROMPTS } from "@/components/demo/DemoTour";
 import { FeatureSpotlight, FEATURE_SPOTLIGHTS } from "@/components/demo/FeatureSpotlight";
 import { DemoProgressPill } from "@/components/demo/DemoProgressPill";
 import { useDemoOrchestrator } from "@/components/demo/useDemoOrchestrator";
-import { ForgeModulePanel } from "@/components/modules/ForgeModulePanel";
 import type { ForgeModuleId } from "@/lib/modules/types";
 import {
   DEMO_EXPLAIN_RESPONSE,
@@ -58,10 +56,12 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
   );
   const [centerView, setCenterView] = useState<CenterView>("chat");
   const [editorFile, setEditorFile] = useState<string | null>(null);
-  const [activeModule, setActiveModule] = useState<ForgeModuleId | null>(null);
   const [buildLogRecording, setBuildLogRecording] = useState(false);
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const [demoDocked, setDemoDocked] = useState(false);
+
+  const activeModule: ForgeModuleId | null =
+    centerView !== "chat" && centerView !== "editor" ? centerView : null;
 
   const engageDemo = useCallback(() => setDemoDocked(true), []);
 
@@ -70,17 +70,22 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
     setCenterView("editor");
   }, []);
 
+  const openModule = useCallback(
+    (id: ForgeModuleId | null) => setCenterView(id ?? "chat"),
+    []
+  );
+
   const demo = useDemoOrchestrator({
     projectId,
     demoActive,
     onSelectFile: handleSelectFile,
     onCenterViewChange: setCenterView,
-    onOpenModule: setActiveModule,
+    onOpenModule: openModule,
     onPendingPrompt: setPendingPrompt,
   });
 
   useEffect(() => {
-    if (demo.cadPanelOpen) setActiveModule("onshape-cad");
+    if (demo.cadPanelOpen) setCenterView("onshape-cad");
   }, [demo.cadPanelOpen]);
 
   useEffect(() => {
@@ -229,7 +234,7 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
         activeModule={activeModule}
         onNewConversation={startNewConversation}
         onSelectConversation={setActiveConversationId}
-        onSelectModule={setActiveModule}
+        onSelectModule={openModule}
         onResourceUploaded={fetchResources}
       />
 
@@ -241,6 +246,8 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
           centerView={centerView}
           editorFile={editorFile}
           fileTree={project.metadata?.fileTree ?? []}
+          metadata={project.metadata}
+          resources={resources}
           onCenterViewChange={setCenterView}
           onConversationCreated={handleConversationCreated}
           onSelectFile={handleSelectFile}
@@ -251,6 +258,8 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
           onDemoMessageSent={demo.handleDemoMessage}
           buildLogRecording={buildLogRecording}
           onBuildLogEntry={appendBuildLog}
+          onRecordingChange={setBuildLogRecording}
+          onResourceUploaded={fetchResources}
           pendingPrompt={pendingPrompt}
           onPendingPromptConsumed={() => setPendingPrompt(null)}
         />
@@ -289,26 +298,6 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
           highlight={demo.contextHighlight}
         />
       )}
-
-      <AnimatePresence>
-        {activeModule && (
-          <ForgeModulePanel
-            moduleId={activeModule}
-            projectId={projectId}
-            projectName={project.name}
-            metadata={project.metadata}
-            resources={resources}
-            recording={buildLogRecording}
-            onRecordingChange={setBuildLogRecording}
-            onClose={() => setActiveModule(null)}
-            onSelectFile={(path) => {
-              setActiveModule(null);
-              handleSelectFile(path);
-            }}
-            onResourceUploaded={fetchResources}
-          />
-        )}
-      </AnimatePresence>
 
       {showDemoUi && demo.progressLabel && (
         <DemoProgressPill

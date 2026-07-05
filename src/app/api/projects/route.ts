@@ -5,7 +5,7 @@ import { desc } from "drizzle-orm";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const rows = db
+  const rows = await db
     .select({
       id: schema.projects.id,
       name: schema.projects.name,

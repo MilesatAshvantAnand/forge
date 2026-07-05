@@ -25,12 +25,12 @@ export async function GET(
 ) {
   const { id } = await params;
 
-  const links = db
+  const rows = await db
     .select()
     .from(schema.resources)
     .where(and(eq(schema.resources.projectId, id), eq(schema.resources.type, "cad")))
-    .all()
-    .map((r) => ({
+    .all();
+  const links = rows.map((r) => ({
       id: r.id,
       name: r.name,
       url: r.summary?.startsWith("http") ? r.summary : null,
@@ -68,7 +68,8 @@ export async function POST(
   const resourceId = randomUUID();
   const now = Date.now();
 
-  db.insert(schema.resources)
+  await db
+    .insert(schema.resources)
     .values({
       id: resourceId,
       projectId: id,
@@ -82,7 +83,8 @@ export async function POST(
     })
     .run();
 
-  db.update(schema.projects)
+  await db
+    .update(schema.projects)
     .set({ updatedAt: now })
     .where(eq(schema.projects.id, id))
     .run();

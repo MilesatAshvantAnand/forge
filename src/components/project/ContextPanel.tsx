@@ -15,6 +15,7 @@ import {
   ChevronRight,
   FileCode,
   Folder,
+  CheckCircle2,
 } from "lucide-react";
 import type { FileTreeNode, ProjectMetadata } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -73,15 +74,16 @@ export function ContextPanel({
         )}
 
         <Section icon={Package} title="Libraries" defaultOpen>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {metadata.libraries.length === 0 && <Muted>None detected</Muted>}
             {metadata.libraries.map((l) => (
-              <span
+              <div
                 key={l.name}
-                className="rounded-full border border-[var(--border)] bg-[var(--elevated)] px-2 py-0.5 text-[11px]"
+                className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--elevated)] px-2 py-1 text-xs"
               >
-                {l.name}
-              </span>
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--green)]" />
+                <span>{l.name}</span>
+              </div>
             ))}
           </div>
         </Section>
@@ -134,15 +136,16 @@ export function ContextPanel({
         </Section>
 
         <Section icon={Radar} title="Sensors">
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {uniqueSensors.length === 0 && <Muted>None detected</Muted>}
             {uniqueSensors.map((s) => (
-              <span
+              <div
                 key={s}
-                className="rounded-full border border-[var(--border)] bg-[var(--elevated)] px-2 py-0.5 text-[11px]"
+                className="flex items-center gap-1.5 rounded-md border border-[var(--border)] bg-[var(--elevated)] px-2 py-1 text-xs"
               >
-                {s}
-              </span>
+                <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[var(--green)]" />
+                <span>{s}</span>
+              </div>
             ))}
           </div>
         </Section>

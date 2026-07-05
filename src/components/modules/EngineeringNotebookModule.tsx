@@ -96,7 +96,7 @@ export function EngineeringNotebookModule({
       expanded={expanded}
       onToggleExpand={onToggleExpand}
     >
-      <div className="flex h-full flex-col px-5 py-6">
+      <div className="mx-auto flex h-full max-w-3xl flex-col px-8 py-8">
         <div className="flex gap-1 rounded-lg border border-[var(--border)] bg-[var(--inset)] p-1">
           <TabButton active={tab === "scope"} onClick={() => setTab("scope")} icon={Target}>
             Project scope
@@ -107,26 +107,26 @@ export function EngineeringNotebookModule({
         </div>
 
         {tab === "scope" && (
-          <div className="mt-3 rounded-lg border border-[var(--border)] bg-[var(--blue-dim)] px-3 py-2 text-xs text-[var(--foreground-secondary)]">
+          <div className="mt-4 rounded-lg border border-[var(--border)] bg-[var(--blue-dim)] px-4 py-3 text-sm text-[var(--foreground-secondary)]">
             Forge uses project scope to prioritize subsystems, generate coding sections, and
             align autonomous routines with competition goals.
           </div>
         )}
 
         {tab === "documents" && docResources.length > 0 && (
-          <div className="mt-3 flex flex-wrap gap-1.5">
+          <div className="mt-4 flex flex-wrap gap-2">
             {docResources.map((r) => (
               <button
                 key={r.id}
                 type="button"
                 onClick={() => setActiveId(r.id)}
-                className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
                   activeId === r.id
                     ? "border-[var(--accent)] bg-[var(--accent-dim)] text-[var(--accent)]"
                     : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--border-strong)]"
                 }`}
               >
-                <FileText className="h-3 w-3" />
+                <FileText className="h-3.5 w-3.5" />
                 {r.name}
               </button>
             ))}
@@ -136,25 +136,25 @@ export function EngineeringNotebookModule({
         {tab === "documents" && docResources.length === 0 ? (
           <EmptyDocs uploading={uploading} fileRef={fileRef} onUpload={handleUpload} />
         ) : tab === "scope" && !scopeResource ? (
-          <div className="mt-6 flex flex-1 flex-col items-center justify-center text-center">
-            <Target className="h-10 w-10 text-[var(--muted)] opacity-60" />
-            <p className="mt-4 text-sm font-medium">No project scope yet</p>
-            <p className="mt-2 max-w-xs text-xs text-[var(--muted)]">
+          <div className="mt-8 flex flex-1 flex-col items-center justify-center text-center">
+            <Target className="h-12 w-12 text-[var(--muted)] opacity-60" />
+            <p className="mt-4 text-base font-semibold">No project scope yet</p>
+            <p className="mt-2 max-w-sm text-sm text-[var(--muted)]">
               Upload a scope document or open the sample project to see scope-driven codegen.
             </p>
           </div>
         ) : (
-          <div className="mt-4 min-h-0 flex-1">
+          <div className="mt-5 min-h-0 flex-1">
             {loading ? (
               <div className="flex justify-center py-12">
-                <Loader2 className="h-5 w-5 animate-spin text-[var(--muted)]" />
+                <Loader2 className="h-6 w-6 animate-spin text-[var(--muted)]" />
               </div>
             ) : content ? (
-              <article className="card max-h-[min(60vh,480px)] overflow-y-auto p-4 text-sm leading-relaxed text-[var(--foreground-secondary)]">
+              <article className="card max-h-[min(65vh,560px)] overflow-y-auto p-5 text-base leading-relaxed text-[var(--foreground-secondary)]">
                 <NotebookContent text={content} />
               </article>
             ) : (
-              <p className="text-sm text-[var(--muted)]">
+              <p className="text-base text-[var(--muted)]">
                 {tab === "scope"
                   ? "Scope document attached — text extraction pending for this format."
                   : "Could not load document content."}
@@ -180,7 +180,7 @@ export function EngineeringNotebookModule({
               type="button"
               onClick={() => fileRef.current?.click()}
               disabled={uploading}
-              className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] py-2.5 text-sm font-medium transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
+              className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] py-3 text-sm font-semibold transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-60"
             >
               {uploading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -211,13 +211,13 @@ function TabButton({
     <button
       type="button"
       onClick={onClick}
-      className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2 text-xs font-medium transition-colors ${
+      className={`flex flex-1 items-center justify-center gap-1.5 rounded-md py-2.5 text-sm font-medium transition-colors ${
         active
           ? "bg-[var(--surface)] text-[var(--foreground)] shadow-sm"
           : "text-[var(--muted)] hover:text-[var(--foreground)]"
       }`}
     >
-      <Icon className="h-3.5 w-3.5" />
+      <Icon className="h-4 w-4" />
       {children}
     </button>
   );
@@ -233,9 +233,9 @@ function EmptyDocs({
   onUpload: (f: File) => void;
 }) {
   return (
-    <div className="mt-6 flex flex-1 flex-col items-center justify-center text-center">
-      <BookOpen className="h-10 w-10 text-[var(--muted)] opacity-60" />
-      <p className="mt-4 text-sm font-medium">No notebook attached</p>
+    <div className="mt-8 flex flex-1 flex-col items-center justify-center text-center">
+      <BookOpen className="h-12 w-12 text-[var(--muted)] opacity-60" />
+      <p className="mt-4 text-base font-semibold">No notebook attached</p>
       <input
         ref={fileRef}
         type="file"
@@ -251,7 +251,7 @@ function EmptyDocs({
         type="button"
         onClick={() => fileRef.current?.click()}
         disabled={uploading}
-        className="mt-6 flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2 text-sm disabled:opacity-60"
+        className="mt-6 flex items-center gap-2 rounded-lg border border-[var(--border)] px-4 py-2.5 text-sm font-semibold disabled:opacity-60"
       >
         {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
         Attach notebook

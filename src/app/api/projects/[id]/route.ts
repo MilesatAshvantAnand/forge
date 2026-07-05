@@ -9,7 +9,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const row = db
+  const row = await db
     .select()
     .from(schema.projects)
     .where(eq(schema.projects.id, id))

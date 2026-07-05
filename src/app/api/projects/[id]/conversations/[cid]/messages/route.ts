@@ -18,7 +18,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; cid: string }> }
 ) {
   const { id, cid } = await params;
-  const rows = db
+  const rows = await db
     .select()
     .from(schema.chatMessages)
     .where(
@@ -58,7 +58,7 @@ export async function POST(
     );
   }
 
-  const project = db
+  const project = await db
     .select()
     .from(schema.projects)
     .where(eq(schema.projects.id, id))
@@ -67,7 +67,7 @@ export async function POST(
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 
-  const conversation = db
+  const conversation = await db
     .select()
     .from(schema.conversations)
     .where(eq(schema.conversations.id, cid))
@@ -81,14 +81,15 @@ export async function POST(
     : null;
 
   // First user message becomes the conversation title
-  const isFirstMessage =
-    db
-      .select({ id: schema.chatMessages.id })
-      .from(schema.chatMessages)
-      .where(eq(schema.chatMessages.conversationId, cid))
-      .all().length === 0;
+  const existingMessages = await db
+    .select({ id: schema.chatMessages.id })
+    .from(schema.chatMessages)
+    .where(eq(schema.chatMessages.conversationId, cid))
+    .all();
+  const isFirstMessage = existingMessages.length === 0;
 
-  db.insert(schema.chatMessages)
+  await db
+    .insert(schema.chatMessages)
     .values({
       id: randomUUID(),
       projectId: id,
@@ -99,7 +100,8 @@ export async function POST(
     })
     .run();
 
-  db.update(schema.conversations)
+  await db
+    .update(schema.conversations)
     .set({
       updatedAt: Date.now(),
       ...(isFirstMessage
@@ -110,7 +112,7 @@ export async function POST(
     .run();
 
   const intent = classifyQuery(message);
-  const resourceList = listResources(id);
+  const resourceList = await listResources(id);
 
   const [chunks, webSources] = await Promise.all([
     retrieveChunks(id, message, 8),
@@ -135,13 +137,13 @@ export async function POST(
   ];
 
   // Conversation history (this conversation only, last 10 turns)
-  const history = db
+  const historyRows = await db
     .select()
     .from(schema.chatMessages)
     .where(eq(schema.chatMessages.conversationId, cid))
     .orderBy(asc(schema.chatMessages.createdAt))
-    .all()
-    .slice(-11, -1);
+    .all();
+  const history = historyRows.slice(-11, -1);
 
   const messages: LlmMessage[] = [
     {
@@ -175,7 +177,8 @@ export async function POST(
             encoder.encode(`data: ${JSON.stringify({ type: "token", token })}\n\n`)
           );
         }
-        db.insert(schema.chatMessages)
+        await db
+          .insert(schema.chatMessages)
           .values({
             id: randomUUID(),
             projectId: id,
