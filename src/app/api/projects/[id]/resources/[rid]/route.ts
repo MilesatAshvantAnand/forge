@@ -1,7 +1,8 @@
-import { readFileSync, existsSync } from "fs";
 import { NextRequest, NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import { extractResourceText, type ResourceType } from "@/lib/resources/ingest";
+import { readResourceFile } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
 
@@ -26,18 +27,18 @@ export async function GET(
   let content: string | null = null;
   if (
     resource.storagePath &&
-    existsSync(resource.storagePath) &&
     ["notebook", "document", "pdf"].includes(resource.type)
   ) {
     try {
-      if (resource.type === "pdf") {
-        const { PDFParse } = await import("pdf-parse");
-        const buffer = readFileSync(resource.storagePath);
-        const parser = new PDFParse({ data: new Uint8Array(buffer) });
-        const result = await parser.getText();
-        content = result.text;
+      const buffer = await readResourceFile(resource.storagePath);
+      if (buffer) {
+        content = await extractResourceText(
+          resource.name,
+          resource.type as ResourceType,
+          buffer
+        );
       } else {
-        content = readFileSync(resource.storagePath, "utf-8");
+        content = resource.summary;
       }
     } catch {
       content = resource.summary;

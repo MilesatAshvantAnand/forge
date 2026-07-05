@@ -70,6 +70,9 @@ export interface ProjectMetadata {
   fileTree: FileTreeNode[];
   totalFiles: number;
   languages: Record<string, number>;
+  /** Set when the project was imported from GitHub (owner/repo) */
+  githubRepo?: string;
+  githubRef?: string;
 }
 
 export interface IndexProgress {

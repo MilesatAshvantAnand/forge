@@ -14,6 +14,7 @@ import {
   Paperclip,
   Loader2,
   Box,
+  Layers,
 } from "lucide-react";
 import { cn, formatBytes } from "@/lib/utils";
 import { FORGE_MODULES, type ForgeModuleId } from "@/lib/modules/types";
@@ -31,6 +32,8 @@ export interface ResourceItem {
   name: string;
   size: number;
   summary?: string | null;
+  externalUrl?: string | null;
+  externalProvider?: string | null;
 }
 
 const RESOURCE_ICONS: Record<string, typeof File> = {
@@ -197,6 +200,16 @@ export function ProjectSidebar({
             Attach notebooks, PDFs, photos, and match footage. Forge folds them
             into every conversation.
           </p>
+        </div>
+
+        <div className="mt-6">
+          <Link
+            href={`/projects/${projectId}/artifacts`}
+            className="flex items-center gap-2.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            <Layers className="h-4 w-4 shrink-0" />
+            Artifacts hub
+          </Link>
         </div>
 
         <div className="mt-6 pb-4">

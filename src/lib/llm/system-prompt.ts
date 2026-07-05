@@ -6,6 +6,7 @@ import type { QueryIntent } from "@/lib/rag/query-router";
 export interface ResourceInfo {
   type: string;
   name: string;
+  summary?: string | null;
 }
 
 export function buildSystemPrompt(
@@ -16,6 +17,13 @@ export function buildSystemPrompt(
 ): string {
   const attached = resourceList
     .map((r) => `- [${r.type}] ${r.name}`)
+    .join("\n");
+
+  // Linked Onshape/CAD documents carry assembly + part studio names in
+  // their summary — surface them so the assistant can reason CAD ↔ code.
+  const cadContext = resourceList
+    .filter((r) => r.type === "cad" && r.summary && !r.summary.startsWith("http"))
+    .map((r) => `- ${r.name}: ${r.summary}`)
     .join("\n");
 
   const missing: string[] = [];
@@ -46,6 +54,13 @@ ${
 Attached project context:
 ${attached || "- [repository] code repository only"}
 
+${
+  cadContext
+    ? `Linked CAD (mechanical design — relate these assemblies/part studios to code subsystems when reasoning):
+${cadContext}`
+    : ""
+}
+
 Context the team has NOT attached yet: ${missing.length > 0 ? missing.join(", ") : "none — rich context available"}.
 
 How to behave — you are an engineering consultant, not a chatbot:
@@ -56,7 +71,8 @@ How to behave — you are an engineering consultant, not a chatbot:
 5. NEVER pretend to know something outside the provided context. State confidence (high / medium / low) at the end of diagnostic answers. If the user could attach a resource that would improve your answer (photos, notebook, footage), say so specifically.
 6. When you use web sources, attribute them ("According to the LemLib docs...").
 7. Preserve the team's coding style in suggestions. You assist the engineers — never replace them.
-8. Be concise and readable. Students read your answers in the pit between matches.`;
+8. Be concise and readable. Students read your answers in the pit between matches.
+9. PROPOSED CODE CHANGES must be apply-able. When you suggest modifying an existing project file, emit a fenced code block whose info string carries the target location, e.g. \`\`\`cpp file=src/intake.cpp lines=42-58 — the block body is the full replacement for exactly those lines (match the retrieved line numbers from context). The user can apply it with one click. For brand-new snippets that don't map to existing lines, omit the metadata.`;
 }
 
 export function buildContextMessage(

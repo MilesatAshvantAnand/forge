@@ -1,11 +1,8 @@
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import { mkdirSync, writeFileSync } from "fs";
-import { join, resolve } from "path";
 import { embedTexts, hasLlmConfigured } from "@/lib/llm/provider";
-
-const DATA_DIR = resolve(process.env.DATA_DIR ?? "./data");
+import { saveResourceFile } from "@/lib/storage";
 
 export type ResourceType =
   | "repository"
@@ -36,6 +33,25 @@ async function extractPdfText(buffer: Buffer): Promise<string> {
   const parser = new PDFParse({ data: new Uint8Array(buffer) });
   const result = await parser.getText();
   return result.text;
+}
+
+function isOfficeFormat(filename: string): boolean {
+  const ext = filename.slice(filename.lastIndexOf(".") + 1).toLowerCase();
+  return ext === "pptx" || ext === "docx";
+}
+
+/** Extract text from a resource buffer based on its filename/type. */
+export async function extractResourceText(
+  filename: string,
+  type: ResourceType,
+  buffer: Buffer
+): Promise<string> {
+  if (type === "pdf") return extractPdfText(buffer);
+  if (isOfficeFormat(filename)) {
+    const { extractOfficeText } = await import("./office");
+    return extractOfficeText(filename, buffer);
+  }
+  return buffer.toString("utf-8");
 }
 
 function chunkText(text: string, resourceName: string) {
@@ -76,10 +92,12 @@ export async function ingestResource(
   const type = classifyResource(filename);
   const resourceId = randomUUID();
 
-  const storageDir = join(DATA_DIR, "projects", projectId, "resources");
-  mkdirSync(storageDir, { recursive: true });
-  const storagePath = join(storageDir, `${resourceId}-${filename}`);
-  writeFileSync(storagePath, buffer);
+  // Local disk in dev; Vercel Blob in production (storagePath = blob URL)
+  const storagePath = await saveResourceFile(
+    projectId,
+    `${resourceId}-${filename}`,
+    buffer
+  );
 
   let indexedChunks = 0;
   let summary: string | null = null;
@@ -87,8 +105,7 @@ export async function ingestResource(
   if (type === "pdf" || type === "notebook" || type === "document") {
     let text = "";
     try {
-      text =
-        type === "pdf" ? await extractPdfText(buffer) : buffer.toString("utf-8");
+      text = await extractResourceText(filename, type, buffer);
     } catch (err) {
       console.error(`Text extraction failed for ${filename}:`, err);
     }
@@ -157,6 +174,8 @@ export async function listResources(projectId: string) {
       status: schema.resources.status,
       size: schema.resources.size,
       summary: schema.resources.summary,
+      externalUrl: schema.resources.externalUrl,
+      externalProvider: schema.resources.externalProvider,
       createdAt: schema.resources.createdAt,
     })
     .from(schema.resources)

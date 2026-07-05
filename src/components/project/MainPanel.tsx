@@ -21,12 +21,14 @@ interface MainPanelProps {
   conversationId: string | null;
   centerView: CenterView;
   editorFile: string | null;
+  editorFocusLine?: number | null;
   fileTree: FileTreeNode[];
   metadata: ProjectMetadata | null;
   resources: ResourceItem[];
   onCenterViewChange: (view: CenterView) => void;
   onConversationCreated: (id: string) => void;
   onSelectFile: (path: string) => void;
+  onOpenFileAtLine?: (path: string, line?: number | null) => void;
   onTitleChanged: () => void;
   suggestedPrompts?: string[];
   welcomeTitle?: string;
@@ -48,12 +50,14 @@ export function MainPanel({
   conversationId,
   centerView,
   editorFile,
+  editorFocusLine,
   fileTree,
   metadata,
   resources,
   onCenterViewChange,
   onConversationCreated,
   onSelectFile,
+  onOpenFileAtLine,
   onTitleChanged,
   suggestedPrompts,
   welcomeTitle,
@@ -114,6 +118,7 @@ export function MainPanel({
             conversationId={conversationId}
             onConversationCreated={onConversationCreated}
             onSelectFile={onSelectFile}
+            onOpenFileAtLine={onOpenFileAtLine}
             onTitleChanged={onTitleChanged}
             suggestedPrompts={suggestedPrompts}
             welcomeTitle={welcomeTitle}
@@ -132,6 +137,9 @@ export function MainPanel({
             filePath={editorFile}
             fileTree={fileTree}
             onSelectFile={onSelectFile}
+            focusLine={editorFocusLine}
+            githubRepo={metadata?.githubRepo ?? null}
+            githubRef={metadata?.githubRef ?? null}
           />
         ) : isModuleView(centerView) ? (
           <ForgeModulePanel

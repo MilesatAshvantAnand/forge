@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import {
   Box,
@@ -12,6 +12,8 @@ import {
   Loader2,
   ExternalLink,
   Check,
+  Plug,
+  Layers,
 } from "lucide-react";
 import type { ProjectMetadata } from "@/lib/types";
 import { formatBytes } from "@/lib/utils";
@@ -35,6 +37,21 @@ interface CadResource {
   name: string;
   size: number;
   summary?: string | null;
+  externalUrl?: string | null;
+  externalProvider?: string | null;
+}
+
+interface OnshapeDocument {
+  id: string;
+  name: string;
+  href: string;
+  modifiedAt: string | null;
+}
+
+interface OnshapeAccountState {
+  configured: boolean;
+  connected: boolean;
+  documents: OnshapeDocument[];
 }
 
 interface OnshapeCadModuleProps {
@@ -66,6 +83,35 @@ export function OnshapeCadModule({
   const [uploading, setUploading] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const [connectSuccess, setConnectSuccess] = useState(false);
+  const [account, setAccount] = useState<OnshapeAccountState | null>(null);
+  const [linkingDocId, setLinkingDocId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/projects/${projectId}/onshape/documents`)
+      .then((r) => r.json())
+      .then((d) =>
+        setAccount({
+          configured: d.configured ?? false,
+          connected: d.connected ?? false,
+          documents: d.documents ?? [],
+        })
+      )
+      .catch(() => setAccount(null));
+  }, [projectId]);
+
+  const linkDocument = async (doc: OnshapeDocument) => {
+    setLinkingDocId(doc.id);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/onshape`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ documentId: doc.id, url: doc.href, name: doc.name }),
+      });
+      if (res.ok) onResourceUploaded?.();
+    } finally {
+      setLinkingDocId(null);
+    }
+  };
 
   const cadResources = resources.filter((r) => r.type === "cad");
   const subsystems = metadata?.subsystems ?? [];
@@ -123,6 +169,58 @@ export function OnshapeCadModule({
       onToggleExpand={onToggleExpand}
     >
       <div className="mx-auto flex max-w-3xl flex-col px-8 py-8">
+        {account?.configured && !account.connected && (
+          <a
+            href={`/api/auth/onshape?projectId=${projectId}`}
+            className="mb-5 flex items-center justify-center gap-2 rounded-xl bg-[var(--blue)] py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+          >
+            <Plug className="h-4 w-4" />
+            Connect Onshape account
+          </a>
+        )}
+
+        {account?.connected && account.documents.length > 0 && (
+          <div className="mb-5 rounded-xl border border-[var(--border)] bg-[var(--inset)] p-5">
+            <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
+              <Check className="h-3.5 w-3.5 text-[var(--green)]" />
+              Onshape connected · Your documents
+            </p>
+            <div className="mt-3 flex flex-col gap-1.5">
+              {account.documents.slice(0, 6).map((doc) => (
+                <div
+                  key={doc.id}
+                  className="glass flex items-center gap-2 rounded-lg px-3 py-2.5"
+                >
+                  <Box className="h-4 w-4 shrink-0 text-[var(--blue)]" />
+                  <span className="min-w-0 flex-1 truncate text-sm">{doc.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => linkDocument(doc)}
+                    disabled={linkingDocId === doc.id}
+                    className="flex shrink-0 items-center gap-1 rounded-lg bg-[var(--blue-dim)] px-2.5 py-1 text-xs font-semibold text-[var(--blue)] ring-1 ring-[var(--blue)]/25 disabled:opacity-50"
+                  >
+                    {linkingDocId === doc.id ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <Link2 className="h-3 w-3" />
+                    )}
+                    Link
+                  </button>
+                  <a
+                    href={doc.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 rounded p-1 text-[var(--muted)] hover:text-[var(--blue)]"
+                    title="Open in Onshape"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="rounded-xl border border-[var(--border)] bg-[var(--inset)] p-5">
           <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
             Connect Onshape
@@ -198,7 +296,9 @@ export function OnshapeCadModule({
             </p>
             <div className="mt-2 flex flex-col gap-1.5">
               {cadResources.map((r) => {
-                const isUrl = r.summary?.startsWith("http");
+                const openUrl =
+                  r.externalUrl ?? (r.summary?.startsWith("http") ? r.summary : null);
+                const hasScopeSummary = r.summary && !r.summary.startsWith("http");
                 return (
                   <div
                     key={r.id}
@@ -207,21 +307,27 @@ export function OnshapeCadModule({
                     <Box className="h-4 w-4 shrink-0 text-[var(--blue)]" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm">{r.name}</p>
-                      {r.size > 0 && (
+                      {hasScopeSummary ? (
+                        <p className="flex items-center gap-1 truncate text-xs text-[var(--muted)]">
+                          <Layers className="h-3 w-3 shrink-0" />
+                          {r.summary}
+                        </p>
+                      ) : r.size > 0 ? (
                         <p className="text-xs text-[var(--muted)]">
                           {formatBytes(r.size)}
                         </p>
-                      )}
+                      ) : null}
                     </div>
-                    {isUrl && (
+                    {openUrl && (
                       <a
-                        href={r.summary!}
+                        href={openUrl}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="shrink-0 rounded p-1 text-[var(--muted)] hover:text-[var(--blue)]"
-                        title="Open in Onshape"
+                        className="flex shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--blue)]"
+                        title="Edit in Onshape (opens new tab)"
                       >
-                        <ExternalLink className="h-4 w-4" />
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Edit in Onshape
                       </a>
                     )}
                   </div>

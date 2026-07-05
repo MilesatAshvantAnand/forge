@@ -33,6 +33,27 @@ export default function HomePage() {
   const [uploading, setUploading] = useState(false);
   const [demoLoading, setDemoLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [githubRepo, setGithubRepo] = useState("");
+  const [importing, setImporting] = useState(false);
+
+  const importFromGitHub = useCallback(async () => {
+    if (!githubRepo.trim()) return;
+    setImporting(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/projects/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo: githubRepo }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Import failed");
+      router.push(`/projects/${data.projectId}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Import failed");
+      setImporting(false);
+    }
+  }, [githubRepo, router]);
 
   useEffect(() => {
     fetch("/api/projects")
@@ -205,6 +226,32 @@ export default function HomePage() {
       <p className="mt-4 text-center text-xs text-[var(--muted)]">
         Guided demo for judges — ~5 minutes, no robotics knowledge required.
       </p>
+
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.34 }}
+        className="mt-4 flex gap-2"
+      >
+        <div className="glass flex min-w-0 flex-1 items-center gap-2 rounded-xl px-3">
+          <FolderGit2 className="h-4 w-4 shrink-0 text-[var(--muted)]" />
+          <input
+            value={githubRepo}
+            onChange={(e) => setGithubRepo(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && importFromGitHub()}
+            placeholder="Import from GitHub — owner/repo or URL"
+            className="min-w-0 flex-1 bg-transparent py-3 text-sm outline-none placeholder:text-[var(--muted)]/60"
+          />
+        </div>
+        <button
+          onClick={importFromGitHub}
+          disabled={importing || !githubRepo.trim()}
+          className="flex shrink-0 items-center gap-2 rounded-xl border border-[var(--border)] px-4 text-sm font-medium transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)] disabled:opacity-50"
+        >
+          {importing ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+          Import
+        </button>
+      </motion.div>
 
       {error && <p className="mt-4 text-center text-xs text-red-400">{error}</p>}
 

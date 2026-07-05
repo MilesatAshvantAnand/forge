@@ -12,6 +12,8 @@
   "dependencies": {
     "@fal-ai/client": "^1.10.1",
     "@libsql/client": "^0.17.4",
+    "@monaco-editor/react": "^4.7.0",
+    "@vercel/blob": "^2.5.0",
     "@xyflow/react": "^12.11.1",
     "better-sqlite3": "^12.11.1",
     "class-variance-authority": "^0.7.1",

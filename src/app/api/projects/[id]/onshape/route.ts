@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomUUID } from "crypto";
 import { eq, and } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
+import {
+  fetchOnshapeDocumentMetadata,
+  getOnshapeToken,
+} from "@/lib/integrations/onshape";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +45,11 @@ export async function GET(
   return NextResponse.json({ links });
 }
 
+function parseDocumentIdFromUrl(url: string): string | null {
+  const match = url.match(/documents\/([a-f0-9]{24})/i);
+  return match?.[1] ?? null;
+}
+
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -49,21 +58,60 @@ export async function POST(
   const body = await req.json().catch(() => null);
 
   const url = typeof body?.url === "string" ? body.url.trim() : "";
-  if (!url) {
+  const documentId =
+    typeof body?.documentId === "string"
+      ? body.documentId
+      : url
+        ? parseDocumentIdFromUrl(url)
+        : null;
+
+  if (!url && !documentId) {
     return NextResponse.json({ error: "Onshape URL is required" }, { status: 400 });
   }
 
-  if (!url.includes("onshape.com")) {
+  if (url && !url.includes("onshape.com")) {
     return NextResponse.json(
       { error: "Paste a valid Onshape document URL (cad.onshape.com)" },
       { status: 400 }
     );
   }
 
-  const name =
+  // If the account is connected via OAuth, pull real document metadata
+  // (element list, assemblies, part studios) into the project scope.
+  let name =
     typeof body?.name === "string" && body.name.trim()
       ? body.name.trim()
-      : parseOnshapeName(url);
+      : url
+        ? parseOnshapeName(url)
+        : "Onshape document";
+  let externalUrl = url || null;
+  let metadataJson: string | null = null;
+  let summary = url || "Onshape document";
+
+  if (documentId) {
+    const token = await getOnshapeToken(id);
+    if (token) {
+      try {
+        const meta = await fetchOnshapeDocumentMetadata(token, documentId);
+        name = meta.name;
+        externalUrl = meta.url;
+        metadataJson = JSON.stringify(meta);
+        summary =
+          [
+            meta.assemblies.length > 0
+              ? `Assemblies: ${meta.assemblies.join(", ")}`
+              : null,
+            meta.partStudios.length > 0
+              ? `Part studios: ${meta.partStudios.join(", ")}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ") || meta.url;
+      } catch (err) {
+        console.error("Onshape metadata fetch failed, storing link only:", err);
+      }
+    }
+  }
 
   const resourceId = randomUUID();
   const now = Date.now();
@@ -78,7 +126,10 @@ export async function POST(
       status: "ready",
       size: 0,
       storagePath: null,
-      summary: url,
+      summary,
+      externalUrl,
+      externalProvider: "onshape",
+      metadata: metadataJson,
       createdAt: now,
     })
     .run();
@@ -92,6 +143,7 @@ export async function POST(
   return NextResponse.json({
     id: resourceId,
     name,
-    url,
+    url: externalUrl,
+    metadata: metadataJson ? JSON.parse(metadataJson) : null,
   });
 }

@@ -54,12 +54,32 @@ export const chatMessages = sqliteTable("chat_messages", {
 export const resources = sqliteTable("resources", {
   id: text("id").primaryKey(),
   projectId: text("project_id").notNull(),
-  // repository | document | notebook | image | video | pdf | other
+  // repository | document | notebook | image | video | pdf | cad | other
   type: text("type").notNull(),
   name: text("name").notNull(),
   status: text("status").notNull().default("ready"),
   size: integer("size").notNull().default(0),
   storagePath: text("storage_path"),
   summary: text("summary"),
+  // External artifact linking (Artifacts hub): where to view/edit this online
+  externalUrl: text("external_url"),
+  // onshape | github | other
+  externalProvider: text("external_provider"),
+  // Provider-specific JSON snapshot (e.g. Onshape document/assembly metadata)
+  metadata: text("metadata"),
   createdAt: integer("created_at").notNull(),
+});
+
+export const integrations = sqliteTable("integrations", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull(),
+  // onshape | github
+  provider: text("provider").notNull(),
+  accessToken: text("access_token"),
+  refreshToken: text("refresh_token"),
+  expiresAt: integer("expires_at"),
+  // Provider-specific JSON (linked repo, linked document ids, account info)
+  metadata: text("metadata"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
 });

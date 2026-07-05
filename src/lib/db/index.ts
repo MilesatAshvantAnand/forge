@@ -83,9 +83,24 @@ export const SCHEMA_SQL = `
     size INTEGER NOT NULL DEFAULT 0,
     storage_path TEXT,
     summary TEXT,
+    external_url TEXT,
+    external_provider TEXT,
+    metadata TEXT,
     created_at INTEGER NOT NULL
   );
   CREATE INDEX IF NOT EXISTS idx_resources_project ON resources(project_id);
+  CREATE TABLE IF NOT EXISTS integrations (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL,
+    provider TEXT NOT NULL,
+    access_token TEXT,
+    refresh_token TEXT,
+    expires_at INTEGER,
+    metadata TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_integrations_project ON integrations(project_id);
 `;
 
 const globalForDb = globalThis as unknown as {
@@ -135,6 +150,9 @@ if (useTurso) {
   }
   ensureColumn("chat_messages", "conversation_id", "conversation_id TEXT");
   ensureColumn("chunks", "source_type", "source_type TEXT NOT NULL DEFAULT 'code'");
+  ensureColumn("resources", "external_url", "external_url TEXT");
+  ensureColumn("resources", "external_provider", "external_provider TEXT");
+  ensureColumn("resources", "metadata", "metadata TEXT");
 
   // better-sqlite3's drizzle driver returns values synchronously (not
   // Promises), but every call site in this app does `await db.<query>()`.

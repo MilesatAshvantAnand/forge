@@ -34,7 +34,8 @@ async function setProgress(projectId: string, progress: IndexProgress) {
 export async function runIndexingPipeline(
   projectId: string,
   projectName: string,
-  zipBuffer: Buffer
+  zipBuffer: Buffer,
+  extraMetadata?: Partial<Pick<ProjectMetadata, "githubRepo" | "githubRef">>
 ): Promise<void> {
   try {
     await setProgress(projectId, {
@@ -101,6 +102,7 @@ export async function runIndexingPipeline(
       fileTree: buildFileTree(extracted),
       totalFiles: extracted.length,
       languages,
+      ...extraMetadata,
     };
 
     await db

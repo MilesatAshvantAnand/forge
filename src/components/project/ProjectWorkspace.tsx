@@ -56,6 +56,7 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
   );
   const [centerView, setCenterView] = useState<CenterView>("chat");
   const [editorFile, setEditorFile] = useState<string | null>(null);
+  const [editorFocusLine, setEditorFocusLine] = useState<number | null>(null);
   const [buildLogRecording, setBuildLogRecording] = useState(false);
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
   const [demoDocked, setDemoDocked] = useState(false);
@@ -67,8 +68,18 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
 
   const handleSelectFile = useCallback((path: string) => {
     setEditorFile(path);
+    setEditorFocusLine(null);
     setCenterView("editor");
   }, []);
+
+  const handleOpenFileAtLine = useCallback(
+    (path: string, line?: number | null) => {
+      setEditorFile(path);
+      setEditorFocusLine(line ?? null);
+      setCenterView("editor");
+    },
+    []
+  );
 
   const openModule = useCallback(
     (id: ForgeModuleId | null) => setCenterView(id ?? "chat"),
@@ -245,12 +256,14 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
           conversationId={activeConversationId}
           centerView={centerView}
           editorFile={editorFile}
+          editorFocusLine={editorFocusLine}
           fileTree={project.metadata?.fileTree ?? []}
           metadata={project.metadata}
           resources={resources}
           onCenterViewChange={setCenterView}
           onConversationCreated={handleConversationCreated}
           onSelectFile={handleSelectFile}
+          onOpenFileAtLine={handleOpenFileAtLine}
           onTitleChanged={fetchConversations}
           suggestedPrompts={showDemoUi ? DEMO_PROMPTS : undefined}
           highlightedPrompt={demo.highlightPrompt}

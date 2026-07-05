@@ -8,6 +8,7 @@ import { Send, Flame, FileCode, Globe, Loader2 } from "lucide-react";
 import type { ChatMessage } from "@/lib/types";
 import { VoiceButton } from "@/components/copilot/VoiceButton";
 import { ListenButton } from "@/components/copilot/ListenButton";
+import { CodeEditBlock, parseCodeBlockMeta } from "./CodeEditBlock";
 import { cn } from "@/lib/utils";
 
 const SUGGESTED_PROMPTS = [
@@ -25,6 +26,7 @@ interface ConversationViewProps {
   conversationId: string | null;
   onConversationCreated: (id: string) => void;
   onSelectFile: (path: string) => void;
+  onOpenFileAtLine?: (path: string, line?: number | null) => void;
   onTitleChanged: () => void;
   suggestedPrompts?: string[];
   welcomeTitle?: string;
@@ -44,6 +46,7 @@ export function ConversationView({
   conversationId,
   onConversationCreated,
   onSelectFile,
+  onOpenFileAtLine,
   onTitleChanged,
   suggestedPrompts,
   welcomeTitle,
@@ -287,7 +290,13 @@ export function ConversationView({
         ) : (
           <div className="mx-auto flex max-w-2xl flex-col gap-6 px-6 py-8">
             {messages.map((m) => (
-              <MessageRow key={m.id} message={m} onSelectFile={onSelectFile} />
+              <MessageRow
+                key={m.id}
+                message={m}
+                projectId={projectId}
+                onSelectFile={onSelectFile}
+                onOpenFileAtLine={onOpenFileAtLine}
+              />
             ))}
             {streaming && messages[messages.length - 1]?.content === "" && (
               <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
@@ -376,10 +385,14 @@ export function ConversationView({
 
 function MessageRow({
   message,
+  projectId,
   onSelectFile,
+  onOpenFileAtLine,
 }: {
   message: ChatMessage;
+  projectId: string;
   onSelectFile: (path: string) => void;
+  onOpenFileAtLine?: (path: string, line?: number | null) => void;
 }) {
   if (message.role === "user") {
     return (
@@ -441,8 +454,36 @@ function MessageRow({
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
-            code({ children, ...props }) {
+            // Block code renders through CodeEditBlock (below) — unwrap the pre
+            pre({ children }) {
+              return <>{children}</>;
+            },
+            code({ children, className, node, ...props }) {
               const text = String(children);
+              const languageMatch = /language-(\w+)/.exec(className ?? "");
+              const isBlock = Boolean(languageMatch) || text.includes("\n");
+
+              if (isBlock) {
+                const meta = parseCodeBlockMeta(
+                  (node?.data as { meta?: string } | undefined)?.meta
+                );
+                return (
+                  <CodeEditBlock
+                    projectId={projectId}
+                    language={languageMatch?.[1] ?? "cpp"}
+                    code={text}
+                    file={meta.file}
+                    startLine={meta.startLine}
+                    endLine={meta.endLine}
+                    onOpenFile={(path, line) =>
+                      onOpenFileAtLine
+                        ? onOpenFileAtLine(path, line)
+                        : onSelectFile(path)
+                    }
+                  />
+                );
+              }
+
               const isPath = /^[\w\-./]+\.(cpp|hpp|c|h|java|py|md|json)$/.test(text);
               if (isPath) {
                 return (

@@ -1,7 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BookOpen, FileText, Loader2, Paperclip, Target } from "lucide-react";
+import {
+  BookOpen,
+  Download,
+  FileText,
+  Loader2,
+  Paperclip,
+  Presentation,
+  Target,
+} from "lucide-react";
 import { ModulePanelShell } from "./ModulePanelShell";
 
 interface NotebookResource {
@@ -9,6 +17,15 @@ interface NotebookResource {
   type: string;
   name: string;
   summary?: string | null;
+}
+
+type DocViewMode = "text" | "pdf" | "slides";
+
+function viewModeFor(name: string): DocViewMode {
+  const ext = name.slice(name.lastIndexOf(".") + 1).toLowerCase();
+  if (ext === "pdf") return "pdf";
+  if (ext === "pptx") return "slides";
+  return "text";
 }
 
 interface EngineeringNotebookModuleProps {
@@ -87,6 +104,7 @@ export function EngineeringNotebookModule({
   }, [viewId, projectId]);
 
   const docResources = notebookResources.filter((r) => r.id !== scopeResource?.id);
+  const activeDoc = docResources.find((r) => r.id === activeId) ?? null;
 
   return (
     <ModulePanelShell
@@ -145,10 +163,52 @@ export function EngineeringNotebookModule({
           </div>
         ) : (
           <div className="mt-5 min-h-0 flex-1">
+            {activeDoc && tab === "documents" && (
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <span
+                  className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-xs font-medium ${
+                    content
+                      ? "border-[var(--green)]/30 bg-[var(--green-dim)] text-[var(--green)]"
+                      : "border-[var(--border)] text-[var(--muted)]"
+                  }`}
+                >
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${content ? "bg-[var(--green)]" : "bg-[var(--muted)]"}`}
+                  />
+                  {loading ? "Extracting…" : content ? "Indexed" : "Stored (no text)"}
+                </span>
+                <a
+                  href={`/api/projects/${projectId}/resources/${activeDoc.id}/file?download=1`}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-[var(--border)] px-2.5 py-1 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download
+                </a>
+              </div>
+            )}
             {loading ? (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-6 w-6 animate-spin text-[var(--muted)]" />
               </div>
+            ) : activeDoc && viewModeFor(activeDoc.name) === "pdf" && tab === "documents" ? (
+              <iframe
+                src={`/api/projects/${projectId}/resources/${activeDoc.id}/file`}
+                title={activeDoc.name}
+                className="h-[min(65vh,640px)] w-full rounded-xl border border-[var(--border)] bg-white"
+              />
+            ) : activeDoc && viewModeFor(activeDoc.name) === "slides" && tab === "documents" ? (
+              content ? (
+                <article className="card max-h-[min(65vh,560px)] overflow-y-auto p-5 text-base leading-relaxed text-[var(--foreground-secondary)]">
+                  <SlideOutline text={content} />
+                </article>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12 text-center">
+                  <Presentation className="h-10 w-10 text-[var(--muted)] opacity-60" />
+                  <p className="mt-3 text-sm text-[var(--muted)]">
+                    No text could be extracted from this deck. Download to view slides.
+                  </p>
+                </div>
+              )
             ) : content ? (
               <article className="card max-h-[min(65vh,560px)] overflow-y-auto p-5 text-base leading-relaxed text-[var(--foreground-secondary)]">
                 <NotebookContent text={content} />
@@ -256,6 +316,43 @@ function EmptyDocs({
         {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Paperclip className="h-4 w-4" />}
         Attach notebook
       </button>
+    </div>
+  );
+}
+
+/** Renders PPTX-extracted text as a slide-by-slide outline. */
+function SlideOutline({ text }: { text: string }) {
+  const slides = text.split(/\n\n(?=## Slide )/).filter((s) => s.trim());
+  return (
+    <div className="space-y-4">
+      {slides.map((slide, i) => {
+        const lines = slide.split("\n");
+        const heading = lines[0]?.startsWith("## ") ? lines[0].slice(3) : `Slide ${i + 1}`;
+        const body = lines[0]?.startsWith("## ") ? lines.slice(1) : lines;
+        return (
+          <div key={i} className="rounded-lg border border-[var(--border)] bg-[var(--inset)] p-4">
+            <p className="flex items-center gap-2 text-sm font-semibold text-[var(--accent)]">
+              <Presentation className="h-3.5 w-3.5" />
+              {heading}
+            </p>
+            <div className="mt-2 space-y-1">
+              {body
+                .filter((l) => l.trim())
+                .map((line, j) =>
+                  line.startsWith("[Notes] ") ? (
+                    <p key={j} className="text-sm italic text-[var(--muted)]">
+                      {line.slice(8)}
+                    </p>
+                  ) : (
+                    <p key={j} className="text-sm">
+                      {line}
+                    </p>
+                  )
+                )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

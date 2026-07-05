@@ -82,19 +82,28 @@ detected automatically). Two things matter for production:
    Without Turso configured, the app still builds and runs on Vercel, but
    data will not reliably persist across cold starts/deployments.
 
-2. **File uploads.** Ingested resources (PDFs, notebooks, ZIPs, CAD files)
-   are currently written to a local `data/` directory
-   (`src/lib/resources/ingest.ts`, `src/lib/indexer/pipeline.ts`). This has
-   the same ephemeral-filesystem caveat as the database — uploaded files
-   won't survive across serverless invocations on Vercel. This is a known
-   limitation; migrating to an object store (e.g.
-   [Vercel Blob](https://vercel.com/docs/storage/vercel-blob)) is recommended
-   as a follow-up.
+2. **File uploads.** Ingested resources (PDFs, notebooks, CAD files) are
+   stored via `src/lib/storage.ts`: local `data/` in dev, and
+   [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) in production
+   when `BLOB_READ_WRITE_TOKEN` is set. Without the token, uploads on Vercel
+   land on the ephemeral filesystem and won't survive across invocations.
+   (The extracted code repository itself lives in the database either way.)
 
 Required environment variables are listed in `.env.example`. At minimum, set
 `DASHSCOPE_API_KEY` (chat) in the Vercel dashboard for AI conversation to
 work; `EXA_API_KEY`, `WISPR_FLOW_API_KEY`, and `ELEVENLABS_API_KEY` are
 optional feature enhancers.
+
+Integration environment variables:
+
+| Variable | Enables |
+|---|---|
+| `ONSHAPE_CLIENT_ID` / `ONSHAPE_CLIENT_SECRET` | Onshape OAuth connect + document metadata in project scope |
+| `NEXT_PUBLIC_APP_URL` | OAuth redirect URIs (set to your deployed URL) |
+| `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` | GitHub OAuth connect — users link their account and push file edits back to their repo |
+| `GITHUB_TOKEN` | Server-wide fallback: private repo import, higher rate limits, and commit-back without per-project OAuth |
+| `BLOB_READ_WRITE_TOKEN` | Persistent resource file storage on Vercel |
+| `EXA_API_KEY` | Web grounding, VEX parts search, related-code search on GitHub |
 
 ## Architecture
 
@@ -128,11 +137,12 @@ src/
 
 | Module | Capability |
 |---|---|
-| 1 (now) | Engineering Assistant — repository understanding, context-aware conversations |
-| 2 | Onshape integration — assemblies, parts, mates as engineering knowledge |
-| 3 | Engineering Notebook — notebook indexing, sketches, automatic documentation |
+| 1 (shipped) | Engineering Assistant — repository understanding, context-aware conversations, apply-able code edits in chat |
+| 2 (shipped) | Onshape integration — OAuth connect, document/assembly metadata in project scope, edit-in-Onshape links |
+| 3 (shipped) | Engineering Notebook — PDF/PPTX/DOCX indexing, in-app viewing, scope-driven context |
 | 4 | Match Intelligence — video, telemetry, failure investigation |
 | 5 | Autonomous Planner — visual planning, simulation, AI-assisted routines |
+| 6 | Robot deploy — PROS compile + V5 upload via the Forge Local Agent (see [docs/robot-deploy-architecture.md](docs/robot-deploy-architecture.md)) |
 
 Every future module feeds the same assistant. The user always talks to one
 Forge — it just keeps getting smarter about their robot.

@@ -70,6 +70,35 @@ export async function searchVexParts(query: string): Promise<WebSource[]> {
   }
 }
 
+/**
+ * Search GitHub for relevant library/example source code (PROS, LemLib,
+ * OkapiLib and the wider VEX ecosystem) — used by the Related Code panel.
+ */
+export async function searchGitHubCode(query: string): Promise<WebSource[]> {
+  const apiKey = process.env.EXA_API_KEY;
+  if (!apiKey) return [];
+
+  const exa = new Exa(apiKey);
+  const enrichedQuery = `${query} VEX robotics PROS LemLib source code`;
+
+  try {
+    const result = await exa.search(enrichedQuery, {
+      type: "fast",
+      numResults: 6,
+      includeDomains: ["github.com"],
+      contents: { highlights: true },
+    });
+    return result.results.map((r) => ({
+      title: r.title ?? r.url,
+      url: r.url,
+      highlights: (r.highlights ?? []).slice(0, 3),
+    }));
+  } catch (err) {
+    console.error("Exa GitHub search failed:", err);
+    return [];
+  }
+}
+
 export function preferredDomains(libraries: DetectedLibrary[]): string[] {
   return libraries
     .map((l) => LIBRARY_DOMAINS[l.name])
