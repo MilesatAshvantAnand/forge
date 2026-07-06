@@ -6,7 +6,7 @@ import { randomUUID } from "crypto";
  * GitHub OAuth + commit-back support.
  *
  * Setup: create an OAuth app at https://github.com/settings/developers with
- * callback `{APP_URL}/api/auth/github/callback`, then set:
+ * callback `{APP_URL}/api/integrations/github/callback`, then set:
  *   GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET
  * and NEXT_PUBLIC_APP_URL. A server-wide GITHUB_TOKEN still works as a
  * fallback for import + commit when no per-project OAuth connection exists.
@@ -20,7 +20,7 @@ export function githubOAuthConfigured(): boolean {
 
 export function githubRedirectUri(): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  return `${base.replace(/\/$/, "")}/api/auth/github/callback`;
+  return `${base.replace(/\/$/, "")}/api/integrations/github/callback`;
 }
 
 export function githubAuthorizeUrl(state: string): string {

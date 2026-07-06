@@ -10,6 +10,7 @@ import { buildSystemPrompt, buildContextMessage } from "@/lib/llm/system-prompt"
 import { listResources } from "@/lib/resources/ingest";
 import { ensureDemoSeeded } from "@/lib/demo/seed";
 import type { ChatCitation, ProjectMetadata } from "@/lib/types";
+import { requireProjectAccess, isDemoProjectId, UnauthorizedError, ForbiddenError } from "@/lib/auth/dal";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -48,6 +49,22 @@ export async function POST(
   { params }: { params: Promise<{ id: string; cid: string }> }
 ) {
   const { id, cid } = await params;
+
+  // Guard: viewer access required for AI chat. Demo project is allowed through
+  // as read-only — it short-circuits inside requireProjectAccess.
+  // Real projects require authentication and team membership.
+  try {
+    await requireProjectAccess(id, "viewer");
+  } catch (err) {
+    if (err instanceof UnauthorizedError) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
+    if (err instanceof ForbiddenError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
+
   const { message } = (await req.json()) as { message: string };
 
   if (!message?.trim()) {

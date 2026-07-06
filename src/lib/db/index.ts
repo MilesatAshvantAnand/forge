@@ -35,8 +35,12 @@ export const SCHEMA_SQL = `
     metadata TEXT,
     index_progress TEXT,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    team_id TEXT,
+    created_by_user_id TEXT,
+    visibility TEXT NOT NULL DEFAULT 'team'
   );
+  CREATE INDEX IF NOT EXISTS idx_projects_team ON projects(team_id);
   CREATE TABLE IF NOT EXISTS files (
     id TEXT PRIMARY KEY,
     project_id TEXT NOT NULL,
@@ -99,9 +103,82 @@ export const SCHEMA_SQL = `
     expires_at INTEGER,
     metadata TEXT,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    connected_by_user_id TEXT,
+    team_id TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_integrations_project ON integrations(project_id);
+
+  -- Better Auth core tables
+  CREATE TABLE IF NOT EXISTS user (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    email_verified INTEGER NOT NULL DEFAULT 0,
+    image TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS session (
+    id TEXT PRIMARY KEY,
+    expires_at INTEGER NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    ip_address TEXT,
+    user_agent TEXT,
+    user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    active_organization_id TEXT
+  );
+  CREATE TABLE IF NOT EXISTS account (
+    id TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    access_token TEXT,
+    refresh_token TEXT,
+    id_token TEXT,
+    access_token_expires_at INTEGER,
+    refresh_token_expires_at INTEGER,
+    scope TEXT,
+    password TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS verification (
+    id TEXT PRIMARY KEY,
+    identifier TEXT NOT NULL,
+    value TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER,
+    updated_at INTEGER
+  );
+
+  -- Better Auth organization plugin tables
+  CREATE TABLE IF NOT EXISTS organization (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE,
+    logo TEXT,
+    created_at INTEGER NOT NULL,
+    metadata TEXT
+  );
+  CREATE TABLE IF NOT EXISTS member (
+    id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'member',
+    created_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS invitation (
+    id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    role TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    expires_at INTEGER NOT NULL,
+    inviter_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE
+  );
 `;
 
 const globalForDb = globalThis as unknown as {
@@ -138,20 +215,39 @@ if (useTurso) {
   sqlite.pragma("journal_mode = WAL");
   sqlite.exec(SCHEMA_SQL);
 
-  // Lightweight migrations for existing dev databases
+  // Lightweight migrations for existing dev databases.
+  // Silently skips if the table doesn't exist (handles fresh-DB + existing-DB scenarios).
   function ensureColumn(table: string, column: string, ddl: string) {
-    const cols = sqlite
-      .prepare(`PRAGMA table_info(${table})`)
-      .all() as { name: string }[];
-    if (!cols.some((c) => c.name === column)) {
-      sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+    try {
+      const cols = sqlite
+        .prepare(`PRAGMA table_info(${table})`)
+        .all() as { name: string }[];
+      // PRAGMA returns empty array for non-existent tables — skip safely
+      if (cols.length === 0) return;
+      if (!cols.some((c) => c.name === column)) {
+        sqlite.exec(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+      }
+    } catch {
+      // Non-fatal — best-effort migration
     }
   }
+
+  // Pre-existing migrations
   ensureColumn("chat_messages", "conversation_id", "conversation_id TEXT");
   ensureColumn("chunks", "source_type", "source_type TEXT NOT NULL DEFAULT 'code'");
   ensureColumn("resources", "external_url", "external_url TEXT");
   ensureColumn("resources", "external_provider", "external_provider TEXT");
   ensureColumn("resources", "metadata", "metadata TEXT");
+
+  // Phase 0/2 migrations — new columns on existing tables
+  ensureColumn("projects", "team_id", "team_id TEXT");
+  ensureColumn("projects", "created_by_user_id", "created_by_user_id TEXT");
+  ensureColumn("projects", "visibility", "visibility TEXT NOT NULL DEFAULT 'team'");
+  ensureColumn("integrations", "connected_by_user_id", "connected_by_user_id TEXT");
+  ensureColumn("integrations", "team_id", "team_id TEXT");
+
+  // Phase 1 — Better Auth session extension
+  ensureColumn("session", "active_organization_id", "active_organization_id TEXT");
 
   // better-sqlite3's drizzle driver returns values synchronously (not
   // Promises), but every call site in this app does `await db.<query>()`.

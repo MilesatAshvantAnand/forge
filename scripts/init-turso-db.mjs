@@ -1,12 +1,12 @@
-// One-time schema setup for a Turso (libSQL) production database.
+// One-time (idempotent) schema setup for a Turso (libSQL) production database.
 //
 // Usage:
 //   TURSO_DATABASE_URL=libsql://your-db.turso.io TURSO_AUTH_TOKEN=xxx \
 //     node scripts/init-turso-db.mjs
 //
-// This is intentionally separate from src/lib/db/index.ts: unlike the local
-// better-sqlite3 file (recreated/checked on every boot), a remote database's
-// schema should be provisioned once, not on every serverless cold start.
+// This script is safe to re-run — it uses CREATE TABLE IF NOT EXISTS for new
+// tables and PRAGMA table_info + ALTER TABLE for new columns, so it is fully
+// idempotent. Running it is the standard "apply migrations to prod" command.
 //
 // Keep this DDL in sync with SCHEMA_SQL in src/lib/db/index.ts.
 import { createClient } from "@libsql/client";
@@ -21,8 +21,12 @@ const SCHEMA_SQL = `
     metadata TEXT,
     index_progress TEXT,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    team_id TEXT,
+    created_by_user_id TEXT,
+    visibility TEXT NOT NULL DEFAULT 'team'
   );
+  CREATE INDEX IF NOT EXISTS idx_projects_team ON projects(team_id);
   CREATE TABLE IF NOT EXISTS files (
     id TEXT PRIMARY KEY,
     project_id TEXT NOT NULL,
@@ -85,10 +89,96 @@ const SCHEMA_SQL = `
     expires_at INTEGER,
     metadata TEXT,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    connected_by_user_id TEXT,
+    team_id TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_integrations_project ON integrations(project_id);
+
+  -- Better Auth core tables
+  CREATE TABLE IF NOT EXISTS user (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    email_verified INTEGER NOT NULL DEFAULT 0,
+    image TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS session (
+    id TEXT PRIMARY KEY,
+    expires_at INTEGER NOT NULL,
+    token TEXT NOT NULL UNIQUE,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    ip_address TEXT,
+    user_agent TEXT,
+    user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    active_organization_id TEXT
+  );
+  CREATE TABLE IF NOT EXISTS account (
+    id TEXT PRIMARY KEY,
+    account_id TEXT NOT NULL,
+    provider_id TEXT NOT NULL,
+    user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    access_token TEXT,
+    refresh_token TEXT,
+    id_token TEXT,
+    access_token_expires_at INTEGER,
+    refresh_token_expires_at INTEGER,
+    scope TEXT,
+    password TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS verification (
+    id TEXT PRIMARY KEY,
+    identifier TEXT NOT NULL,
+    value TEXT NOT NULL,
+    expires_at INTEGER NOT NULL,
+    created_at INTEGER,
+    updated_at INTEGER
+  );
+
+  -- Better Auth organization plugin tables
+  CREATE TABLE IF NOT EXISTS organization (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE,
+    logo TEXT,
+    created_at INTEGER NOT NULL,
+    metadata TEXT
+  );
+  CREATE TABLE IF NOT EXISTS member (
+    id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+    user_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'member',
+    created_at INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS invitation (
+    id TEXT PRIMARY KEY,
+    organization_id TEXT NOT NULL REFERENCES organization(id) ON DELETE CASCADE,
+    email TEXT NOT NULL,
+    role TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    expires_at INTEGER NOT NULL,
+    inviter_id TEXT NOT NULL REFERENCES user(id) ON DELETE CASCADE
+  );
 `;
+
+/**
+ * Idempotent ALTER TABLE helper for Turso.
+ * Queries PRAGMA table_info and adds the column only if it's missing.
+ */
+async function ensureColumn(client, table, column, ddl) {
+  const result = await client.execute(`PRAGMA table_info(${table})`);
+  const exists = result.rows.some((row) => row.name === column);
+  if (!exists) {
+    console.log(`  + ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+    await client.execute(`ALTER TABLE ${table} ADD COLUMN ${ddl}`);
+  }
+}
 
 async function main() {
   const url = process.env.TURSO_DATABASE_URL;
@@ -103,8 +193,26 @@ async function main() {
 
   const client = createClient({ url, authToken });
   console.log(`Provisioning Forge schema on ${url} ...`);
+
+  // Create all tables (idempotent via IF NOT EXISTS)
   await client.executeMultiple(SCHEMA_SQL);
-  console.log("Done. Tables created (or already existed).");
+  console.log("Tables created or already existed.");
+
+  // Idempotent column migrations for tables that may already exist in prod
+  console.log("Applying column migrations...");
+  await ensureColumn(client, "projects", "team_id", "team_id TEXT");
+  await ensureColumn(client, "projects", "created_by_user_id", "created_by_user_id TEXT");
+  await ensureColumn(client, "projects", "visibility", "visibility TEXT NOT NULL DEFAULT 'team'");
+  await ensureColumn(client, "integrations", "connected_by_user_id", "connected_by_user_id TEXT");
+  await ensureColumn(client, "integrations", "team_id", "team_id TEXT");
+  await ensureColumn(client, "chat_messages", "conversation_id", "conversation_id TEXT");
+  await ensureColumn(client, "chunks", "source_type", "source_type TEXT NOT NULL DEFAULT 'code'");
+  await ensureColumn(client, "resources", "external_url", "external_url TEXT");
+  await ensureColumn(client, "resources", "external_provider", "external_provider TEXT");
+  await ensureColumn(client, "resources", "metadata", "metadata TEXT");
+  await ensureColumn(client, "session", "active_organization_id", "active_organization_id TEXT");
+
+  console.log("Done. Schema is up to date.");
   client.close();
 }
 

@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { randomUUID } from "crypto";
 import { runIndexingPipeline } from "@/lib/indexer/pipeline";
+import { getSession } from "@/lib/auth/dal";
+import { getDefaultTeamId } from "@/lib/auth/team";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -87,6 +89,11 @@ export async function POST(req: NextRequest) {
   const projectName = parsed.repo.split("/")[1];
   const now = Date.now();
 
+  // Attribute to the calling user's team if authenticated
+  const session = await getSession();
+  const teamId = session ? await getDefaultTeamId(session.user.id) : null;
+  const createdByUserId = session?.user.id ?? null;
+
   await db
     .insert(schema.projects)
     .values({
@@ -101,6 +108,8 @@ export async function POST(req: NextRequest) {
       }),
       createdAt: now,
       updatedAt: now,
+      teamId,
+      createdByUserId,
     })
     .run();
 

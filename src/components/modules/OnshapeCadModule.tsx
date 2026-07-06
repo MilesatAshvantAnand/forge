@@ -171,7 +171,7 @@ export function OnshapeCadModule({
       <div className="mx-auto flex max-w-3xl flex-col px-8 py-8">
         {account?.configured && !account.connected && (
           <a
-            href={`/api/auth/onshape?projectId=${projectId}`}
+            href={`/api/integrations/onshape?projectId=${projectId}`}
             className="mb-5 flex items-center justify-center gap-2 rounded-xl bg-[var(--blue)] py-3 text-sm font-semibold text-black transition-opacity hover:opacity-90"
           >
             <Plug className="h-4 w-4" />

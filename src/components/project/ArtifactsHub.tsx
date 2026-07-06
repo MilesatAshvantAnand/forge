@@ -150,7 +150,7 @@ export function ArtifactsHub({ projectId }: { projectId: string }) {
                 !github.connected &&
                 github.oauthConfigured && (
                   <ActionLink
-                    href={`/api/auth/github?projectId=${projectId}`}
+                    href={`/api/integrations/github?projectId=${projectId}`}
                     label="Connect GitHub"
                     internal
                   />

@@ -253,7 +253,7 @@ export function CodeEditorView({
               )}
               {githubRepo && github && !canPush && github.oauthConfigured && (
                 <a
-                  href={`/api/auth/github?projectId=${projectId}`}
+                  href={`/api/integrations/github?projectId=${projectId}`}
                   className="flex shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-2 py-1 text-[10px] font-medium text-[var(--muted)] transition-colors hover:border-[var(--border-strong)] hover:text-[var(--foreground)]"
                   title="Connect your GitHub account to push edits back"
                 >

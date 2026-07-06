@@ -12,10 +12,18 @@ import {
   Rocket,
   ArrowRight,
   FolderGit2,
+  LogOut,
+  User,
 } from "lucide-react";
 import { formatRelativeTime } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { LogoCarousel } from "@/components/home/LogoCarousel";
+
+interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+}
 
 interface ProjectCard {
   id: string;
@@ -35,6 +43,7 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const [githubRepo, setGithubRepo] = useState("");
   const [importing, setImporting] = useState(false);
+  const [authUser, setAuthUser] = useState<AuthUser | null | undefined>(undefined);
 
   const importFromGitHub = useCallback(async () => {
     if (!githubRepo.trim()) return;
@@ -56,11 +65,28 @@ export default function HomePage() {
   }, [githubRepo, router]);
 
   useEffect(() => {
+    // Check auth state
+    fetch("/api/auth/get-session")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setAuthUser(data?.user ?? null))
+      .catch(() => setAuthUser(null));
+  }, []);
+
+  useEffect(() => {
+    // Only load projects if we know the auth state
+    if (authUser === undefined) return;
     fetch("/api/projects")
       .then((r) => r.json())
       .then((d) => setProjects(d.projects ?? []))
       .catch(() => setProjects([]));
-  }, []);
+  }, [authUser]);
+
+  async function handleSignOut() {
+    await fetch("/api/auth/sign-out", { method: "POST" });
+    setAuthUser(null);
+    setProjects([]);
+    router.refresh();
+  }
 
   const handleFile = async (file: File) => {
     if (!file.name.endsWith(".zip")) {
@@ -129,7 +155,36 @@ export default function HomePage() {
           <Flame className="h-5 w-5 text-[var(--accent)]" />
           <span className="text-sm font-semibold tracking-tight">Forge</span>
         </div>
-        <ThemeToggle showLabel />
+        <div className="flex items-center gap-3">
+          <ThemeToggle showLabel />
+          {authUser === undefined ? null : authUser ? (
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
+                <User className="h-3.5 w-3.5" />
+                {authUser.name}
+              </span>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-1 text-xs text-[var(--muted)] hover:text-[var(--foreground)]"
+                title="Sign out"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              <Link href="/login" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]">
+                Sign in
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-black hover:opacity-90"
+              >
+                Sign up
+              </Link>
+            </div>
+          )}
+        </div>
       </motion.div>
 
       <motion.div

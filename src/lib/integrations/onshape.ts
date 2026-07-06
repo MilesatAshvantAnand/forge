@@ -6,7 +6,7 @@ import { randomUUID } from "crypto";
  * Onshape OAuth 2.0 + REST API client.
  *
  * Setup: create an OAuth app at https://dev-portal.onshape.com/oauthApps with
- * redirect URI `{APP_URL}/api/auth/onshape/callback`, then set:
+ * redirect URI `{APP_URL}/api/integrations/onshape/callback`, then set:
  *   ONSHAPE_CLIENT_ID, ONSHAPE_CLIENT_SECRET
  * and NEXT_PUBLIC_APP_URL (used to build the redirect URI).
  */
@@ -20,7 +20,7 @@ export function onshapeConfigured(): boolean {
 
 export function onshapeRedirectUri(): string {
   const base = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  return `${base.replace(/\/$/, "")}/api/auth/onshape/callback`;
+  return `${base.replace(/\/$/, "")}/api/integrations/onshape/callback`;
 }
 
 export function onshapeAuthorizeUrl(state: string): string {

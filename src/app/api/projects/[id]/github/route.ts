@@ -8,6 +8,7 @@ import {
   githubOAuthConfigured,
 } from "@/lib/integrations/github";
 import type { ProjectMetadata } from "@/lib/types";
+import { requireProjectAccess, UnauthorizedError, ForbiddenError } from "@/lib/auth/dal";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +58,20 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+
+  // Guard: must be at least a "member" to commit code back to GitHub
+  try {
+    await requireProjectAccess(id, "member");
+  } catch (err) {
+    if (err instanceof UnauthorizedError) {
+      return NextResponse.json({ error: err.message }, { status: 401 });
+    }
+    if (err instanceof ForbiddenError) {
+      return NextResponse.json({ error: err.message }, { status: 403 });
+    }
+    throw err;
+  }
+
   const body = await req.json().catch(() => null);
 
   const path = typeof body?.path === "string" ? body.path : null;
