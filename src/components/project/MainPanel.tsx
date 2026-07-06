@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import { ConversationView } from "./ConversationView";
 import { CodeEditorView } from "./CodeEditorView";
 import { ForgeModulePanel } from "@/components/modules/ForgeModulePanel";
+import { VoiceCommandButton } from "@/components/copilot/VoiceCommandButton";
+import type { VoiceCommand } from "@/lib/voice/commands";
 import { FORGE_MODULES, type ForgeModuleId } from "@/lib/modules/types";
 import type { FileTreeNode, ProjectMetadata } from "@/lib/types";
 import type { ResourceItem } from "./ProjectSidebar";
@@ -42,6 +44,10 @@ interface MainPanelProps {
   onResourceUploaded?: () => void;
   pendingPrompt?: string | null;
   onPendingPromptConsumed?: () => void;
+  pendingInput?: string | null;
+  onPendingInputConsumed?: () => void;
+  onVoiceCommand?: (command: VoiceCommand) => void;
+  onSendChatPrompt?: (prompt: string) => void;
 }
 
 export function MainPanel({
@@ -71,6 +77,10 @@ export function MainPanel({
   onResourceUploaded,
   pendingPrompt,
   onPendingPromptConsumed,
+  pendingInput,
+  onPendingInputConsumed,
+  onVoiceCommand,
+  onSendChatPrompt,
 }: MainPanelProps) {
   return (
     <div className="flex h-full min-w-0 flex-1 flex-col border-r border-[var(--border)]">
@@ -103,11 +113,14 @@ export function MainPanel({
             Recording
           </span>
         )}
-        {centerView === "editor" && editorFile && (
-          <span className="ml-auto shrink-0 truncate pl-4 font-mono text-xs text-[var(--muted)]">
-            {editorFile}
-          </span>
-        )}
+        <div className="ml-auto flex shrink-0 items-center gap-2 pl-4">
+          {centerView === "editor" && editorFile && (
+            <span className="truncate font-mono text-xs text-[var(--muted)]">
+              {editorFile}
+            </span>
+          )}
+          {onVoiceCommand && <VoiceCommandButton onCommand={onVoiceCommand} />}
+        </div>
       </div>
 
       <div className="min-h-0 flex-1">
@@ -130,6 +143,8 @@ export function MainPanel({
             onBuildLogEntry={onBuildLogEntry}
             pendingPrompt={pendingPrompt}
             onPendingPromptConsumed={onPendingPromptConsumed}
+            pendingInput={pendingInput}
+            onPendingInputConsumed={onPendingInputConsumed}
           />
         ) : centerView === "editor" ? (
           <CodeEditorView
@@ -153,6 +168,7 @@ export function MainPanel({
             onClose={() => onCenterViewChange("chat")}
             onSelectFile={onSelectFile}
             onResourceUploaded={onResourceUploaded}
+            onSendChatPrompt={onSendChatPrompt}
           />
         ) : null}
       </div>

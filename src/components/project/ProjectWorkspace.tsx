@@ -19,6 +19,8 @@ import { FeatureSpotlight, FEATURE_SPOTLIGHTS } from "@/components/demo/FeatureS
 import { DemoProgressPill } from "@/components/demo/DemoProgressPill";
 import { useDemoOrchestrator } from "@/components/demo/useDemoOrchestrator";
 import type { ForgeModuleId } from "@/lib/modules/types";
+import type { VoiceCommand } from "@/lib/voice/commands";
+import { speakText } from "@/lib/voice/speak";
 import {
   DEMO_EXPLAIN_RESPONSE,
   DEMO_INTAKE_RESPONSE,
@@ -59,6 +61,7 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
   const [editorFocusLine, setEditorFocusLine] = useState<number | null>(null);
   const [buildLogRecording, setBuildLogRecording] = useState(false);
   const [pendingPrompt, setPendingPrompt] = useState<string | null>(null);
+  const [pendingInput, setPendingInput] = useState<string | null>(null);
   const [demoDocked, setDemoDocked] = useState(false);
 
   const activeModule: ForgeModuleId | null =
@@ -84,6 +87,51 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
   const openModule = useCallback(
     (id: ForgeModuleId | null) => setCenterView(id ?? "chat"),
     []
+  );
+
+  // Send a prepared prompt through the chat (used by module reflection flows)
+  const sendChatPrompt = useCallback((prompt: string) => {
+    setCenterView("chat");
+    setPendingPrompt(prompt);
+  }, []);
+
+  const handleVoiceCommand = useCallback(
+    async (command: VoiceCommand) => {
+      switch (command.type) {
+        case "switch-view":
+          setCenterView(command.view);
+          break;
+        case "open-artifacts":
+          router.push(`/projects/${projectId}/artifacts`);
+          break;
+        case "new-conversation":
+          setActiveConversationId(null);
+          setCenterView("chat");
+          break;
+        case "read-last-answer": {
+          if (!activeConversationId) break;
+          try {
+            const res = await fetch(
+              `/api/projects/${projectId}/conversations/${activeConversationId}/messages`
+            );
+            const d = await res.json();
+            const last = (d.messages ?? [])
+              .filter((m: { role: string }) => m.role === "assistant")
+              .pop();
+            if (last?.content) await speakText(last.content);
+          } catch {
+            // TTS is best-effort
+          }
+          break;
+        }
+        case "dictate-to-chat":
+          // Unrecognized command → drop the transcript into the chat input
+          setCenterView("chat");
+          setPendingInput(command.text);
+          break;
+      }
+    },
+    [projectId, activeConversationId, router]
   );
 
   const demo = useDemoOrchestrator({
@@ -275,6 +323,10 @@ export function ProjectWorkspace({ projectId }: { projectId: string }) {
           onResourceUploaded={fetchResources}
           pendingPrompt={pendingPrompt}
           onPendingPromptConsumed={() => setPendingPrompt(null)}
+          pendingInput={pendingInput}
+          onPendingInputConsumed={() => setPendingInput(null)}
+          onVoiceCommand={handleVoiceCommand}
+          onSendChatPrompt={sendChatPrompt}
         />
 
         {showDemoUi && currentBeat && isSpotlightBeat(currentBeat) && spotlightMeta && (

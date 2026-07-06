@@ -21,6 +21,7 @@ interface ForgeModulePanelProps {
   onClose: () => void;
   onSelectFile?: (path: string) => void;
   onResourceUploaded?: () => void;
+  onSendChatPrompt?: (prompt: string) => void;
 }
 
 export function ForgeModulePanel({
@@ -34,6 +35,7 @@ export function ForgeModulePanel({
   onClose,
   onSelectFile,
   onResourceUploaded,
+  onSendChatPrompt,
 }: ForgeModulePanelProps) {
   const [expanded, setExpanded] = useState(false);
   const isDemoProject = projectName.includes("Demo");
@@ -98,6 +100,8 @@ export function ForgeModulePanel({
           metadata={metadata}
           onClose={onClose}
           onSelectFile={onSelectFile}
+          onResourceUploaded={onResourceUploaded}
+          onSendChatPrompt={onSendChatPrompt}
           {...shell}
         />
       );

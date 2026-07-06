@@ -38,6 +38,9 @@ interface ConversationViewProps {
   onBuildLogEntry?: (user: string, assistant?: string) => void;
   pendingPrompt?: string | null;
   onPendingPromptConsumed?: () => void;
+  /** Pre-fill the input without sending (e.g. voice command fallback) */
+  pendingInput?: string | null;
+  onPendingInputConsumed?: () => void;
 }
 
 export function ConversationView({
@@ -58,6 +61,8 @@ export function ConversationView({
   onBuildLogEntry,
   pendingPrompt,
   onPendingPromptConsumed,
+  pendingInput,
+  onPendingInputConsumed,
 }: ConversationViewProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState("");
@@ -99,6 +104,14 @@ export function ConversationView({
       onPendingPromptConsumed?.();
     }
   }, [pendingPrompt]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (pendingInput) {
+      setInput(pendingInput);
+      textareaRef.current?.focus();
+      onPendingInputConsumed?.();
+    }
+  }, [pendingInput]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const send = useCallback(
     async (text: string) => {
