@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { ingestResource, listResources } from "@/lib/resources/ingest";
+import { ensureDemoSeeded } from "@/lib/demo/seed";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -9,6 +10,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  await ensureDemoSeeded(id);
   return NextResponse.json({ resources: await listResources(id) });
 }
 

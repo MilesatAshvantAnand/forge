@@ -8,6 +8,7 @@ import { searchWeb } from "@/lib/knowledge/exa";
 import { streamChat, hasLlmConfigured, type LlmMessage } from "@/lib/llm/provider";
 import { buildSystemPrompt, buildContextMessage } from "@/lib/llm/system-prompt";
 import { listResources } from "@/lib/resources/ingest";
+import { ensureDemoSeeded } from "@/lib/demo/seed";
 import type { ChatCitation, ProjectMetadata } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -18,6 +19,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; cid: string }> }
 ) {
   const { id, cid } = await params;
+  await ensureDemoSeeded(id);
   const rows = await db
     .select()
     .from(schema.chatMessages)

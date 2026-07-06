@@ -6,6 +6,7 @@ import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { embedTexts, hasLlmConfigured } from "@/lib/llm/provider";
 import { defaultDataDir } from "@/lib/runtime-paths";
+import { ensureDemoSeeded } from "@/lib/demo/seed";
 
 export const dynamic = "force-dynamic";
 
@@ -16,6 +17,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  await ensureDemoSeeded(id);
   const path = req.nextUrl.searchParams.get("path");
 
   if (!path) {

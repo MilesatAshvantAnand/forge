@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { eq, and } from "drizzle-orm";
 import { db, schema } from "@/lib/db";
 import { readResourceFile } from "@/lib/storage";
+import { ensureDemoSeeded } from "@/lib/demo/seed";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +33,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string; rid: string }> }
 ) {
   const { id, rid } = await params;
+  await ensureDemoSeeded(id);
 
   const rows = await db
     .select()

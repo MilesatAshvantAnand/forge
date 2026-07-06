@@ -1,6 +1,13 @@
 /** Fixed name so we reuse the same demo project across sessions */
 export const DEMO_PROJECT_NAME = "VEX Team 9999X — Demo Robot";
 
+/**
+ * Fixed, deterministic id for the seeded demo project. Because the demo is
+ * identical for everyone and seeded from a committed bundle, the id is stable
+ * so any serverless instance serves the same URL (see src/lib/demo/seed.ts).
+ */
+export const DEMO_PROJECT_ID = "demo-forge-vex-9999x";
+
 /** Display stats for judge demo — no framework/library names */
 export const DEMO_PROJECT_STATS = {
   fileCount: 126,

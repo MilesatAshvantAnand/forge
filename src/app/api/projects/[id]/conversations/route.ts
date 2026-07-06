@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { desc, eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
+import { ensureDemoSeeded } from "@/lib/demo/seed";
 
 export const dynamic = "force-dynamic";
 
@@ -10,6 +11,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  await ensureDemoSeeded(id);
   const rows = await db
     .select()
     .from(schema.conversations)
@@ -25,6 +27,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  await ensureDemoSeeded(id);
   const now = Date.now();
   const conversation = {
     id: randomUUID(),
