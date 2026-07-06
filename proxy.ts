@@ -11,8 +11,12 @@
  *
  * Rules:
  *  - /demo and /api/* are always public (no redirect)
- *  - /projects/* requires a session cookie → redirect to /login if missing
- *  - /settings/* requires a session cookie → redirect to /login if missing
+ *  - /projects/* is public: visitors get an anonymous session automatically
+ *    (see AnonymousSessionBootstrap) and real authorization happens in the
+ *    DAL, so redirecting to /login would break the no-sign-in flow
+ *  - /settings/* requires a session cookie → redirect to /login if missing.
+ *    (Anonymous sessions pass this cookie check; the settings APIs reject
+ *    anonymous users server-side via requireRealSession.)
  *  - Everything else (/, /login, /signup, static assets) is public
  */
 import { NextResponse } from "next/server";
@@ -40,8 +44,7 @@ export function proxy(request: NextRequest) {
   }
 
   // Protected paths — require a session cookie
-  const isProtected =
-    pathname.startsWith("/projects/") || pathname.startsWith("/settings/");
+  const isProtected = pathname.startsWith("/settings/");
 
   if (!isProtected) {
     return NextResponse.next();

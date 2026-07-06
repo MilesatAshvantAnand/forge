@@ -7,6 +7,7 @@ import { join, dirname } from "path";
 import { embedTexts, hasLlmConfigured } from "@/lib/llm/provider";
 import { defaultDataDir } from "@/lib/runtime-paths";
 import { ensureDemoSeeded } from "@/lib/demo/seed";
+import { getBotProfile, runGateway, type GatewayReport } from "@/lib/gateway";
 
 export const dynamic = "force-dynamic";
 
@@ -161,5 +162,18 @@ export async function PATCH(
     .where(eq(schema.projects.id, id))
     .run();
 
-  return NextResponse.json({ ok: true, path, size });
+  // Bot Gateway: if this project has a bot profile, validate the saved code
+  // against it and attach the report. Saves are never blocked — the editor is
+  // the student's call — but the report surfaces mismatches immediately.
+  let gateway: GatewayReport | null = null;
+  if (/\.(cpp|hpp|c|h)$/.test(path)) {
+    try {
+      const profile = await getBotProfile(id);
+      if (profile) gateway = runGateway(content, profile);
+    } catch (err) {
+      console.error("Gateway check failed on save (non-fatal):", err);
+    }
+  }
+
+  return NextResponse.json({ ok: true, path, size, gateway });
 }

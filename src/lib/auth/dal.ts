@@ -83,6 +83,21 @@ export async function requireSession() {
   return session;
 }
 
+/**
+ * Returns the session or throws — additionally rejecting anonymous (guest)
+ * sessions with 403. Use for account-level surfaces (team settings, invites)
+ * that only make sense for a real, upgradeable account.
+ */
+export async function requireRealSession() {
+  const session = await requireSession();
+  if ((session.user as { isAnonymous?: boolean | null }).isAnonymous) {
+    throw new ForbiddenError(
+      "Create an account to use this feature — sign up to save your work."
+    );
+  }
+  return session;
+}
+
 // ─── Project access ──────────────────────────────────────────────────────────
 
 /**

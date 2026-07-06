@@ -94,6 +94,18 @@ const SCHEMA_SQL = `
     team_id TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_integrations_project ON integrations(project_id);
+  CREATE TABLE IF NOT EXISTS bot_profiles (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT 'My Robot',
+    firmware_version TEXT,
+    pros_kernel_version TEXT,
+    brain_type TEXT NOT NULL DEFAULT 'V5',
+    components TEXT NOT NULL DEFAULT '[]',
+    rubric_version TEXT NOT NULL DEFAULT '1',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
 
   -- Better Auth core tables
   CREATE TABLE IF NOT EXISTS user (
@@ -103,7 +115,8 @@ const SCHEMA_SQL = `
     email_verified INTEGER NOT NULL DEFAULT 0,
     image TEXT,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    is_anonymous INTEGER DEFAULT 0
   );
   CREATE TABLE IF NOT EXISTS session (
     id TEXT PRIMARY KEY,
@@ -211,6 +224,7 @@ async function main() {
   await ensureColumn(client, "resources", "external_provider", "external_provider TEXT");
   await ensureColumn(client, "resources", "metadata", "metadata TEXT");
   await ensureColumn(client, "session", "active_organization_id", "active_organization_id TEXT");
+  await ensureColumn(client, "user", "is_anonymous", "is_anonymous INTEGER DEFAULT 0");
 
   console.log("Done. Schema is up to date.");
   client.close();

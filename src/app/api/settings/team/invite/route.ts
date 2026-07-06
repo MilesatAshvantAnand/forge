@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
 import { randomUUID } from "crypto";
-import { requireSession } from "@/lib/auth/dal";
+import { requireRealSession, ForbiddenError } from "@/lib/auth/dal";
 import { z } from "zod";
 
 export const dynamic = "force-dynamic";
@@ -13,9 +13,15 @@ const inviteSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const session = await requireSession().catch(() => null);
+  // Team invites require a real (non-anonymous) account
+  const session = await requireRealSession().catch((err) => {
+    return err instanceof ForbiddenError ? { forbidden: err.message } : null;
+  });
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if ("forbidden" in session) {
+    return NextResponse.json({ error: session.forbidden }, { status: 403 });
   }
 
   const body = await req.json().catch(() => null);

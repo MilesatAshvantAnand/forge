@@ -18,11 +18,13 @@ import {
 import { formatRelativeTime } from "@/lib/utils";
 import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { LogoCarousel } from "@/components/home/LogoCarousel";
+import { ensureAnonymousSession } from "@/lib/auth/anonymous-client";
 
 interface AuthUser {
   id: string;
   name: string;
   email: string;
+  isAnonymous?: boolean | null;
 }
 
 interface ProjectCard {
@@ -65,10 +67,10 @@ export default function HomePage() {
   }, [githubRepo, router]);
 
   useEffect(() => {
-    // Check auth state
-    fetch("/api/auth/get-session")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setAuthUser(data?.user ?? null))
+    // Resolve auth state — silently creates an anonymous session on first
+    // visit so guests get a persistent workspace without signing in.
+    ensureAnonymousSession()
+      .then((user) => setAuthUser(user ?? null))
       .catch(() => setAuthUser(null));
   }, []);
 
@@ -157,7 +159,20 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-3">
           <ThemeToggle showLabel />
-          {authUser === undefined ? null : authUser ? (
+          {authUser === undefined ? null : authUser?.isAnonymous ? (
+            <div className="flex items-center gap-3">
+              <Link href="/login" className="text-xs text-[var(--muted)] hover:text-[var(--foreground)]">
+                Sign in
+              </Link>
+              <Link
+                href="/signup"
+                title="Create a free account to keep this workspace on all your devices"
+                className="rounded-lg bg-[var(--accent)] px-3 py-1.5 text-xs font-medium text-black hover:opacity-90"
+              >
+                Sign up to save your work
+              </Link>
+            </div>
+          ) : authUser ? (
             <div className="flex items-center gap-2">
               <span className="flex items-center gap-1.5 text-xs text-[var(--muted)]">
                 <User className="h-3.5 w-3.5" />
@@ -332,6 +347,15 @@ export default function HomePage() {
               View all
             </Link>
           </div>
+          {authUser?.isAnonymous && (
+            <p className="mt-1 text-xs text-[var(--muted)]/70">
+              Saved in this browser —{" "}
+              <Link href="/signup" className="text-[var(--accent)] hover:underline">
+                sign up
+              </Link>{" "}
+              to keep your work across devices.
+            </p>
+          )}
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             {projects.slice(0, 4).map((p) => (
               <Link

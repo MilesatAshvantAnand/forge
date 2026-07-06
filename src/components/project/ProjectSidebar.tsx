@@ -15,6 +15,8 @@ import {
   Loader2,
   Box,
   Layers,
+  Bot,
+  Route,
 } from "lucide-react";
 import { cn, formatBytes } from "@/lib/utils";
 import { FORGE_MODULES, type ForgeModuleId } from "@/lib/modules/types";
@@ -44,6 +46,7 @@ const RESOURCE_ICONS: Record<string, typeof File> = {
   image: ImageIcon,
   video: Video,
   cad: Box,
+  "auton-plan": Route,
   other: File,
 };
 
@@ -202,13 +205,21 @@ export function ProjectSidebar({
           </p>
         </div>
 
-        <div className="mt-6">
+        <div className="mt-6 flex flex-col gap-2">
           <Link
             href={`/projects/${projectId}/artifacts`}
             className="flex items-center gap-2.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
           >
             <Layers className="h-4 w-4 shrink-0" />
             Artifacts hub
+          </Link>
+          <Link
+            href={`/projects/${projectId}/bot-profile`}
+            title="Describe your robot's firmware and port map — the Bot Gateway checks generated code against it"
+            className="flex items-center gap-2.5 rounded-lg border border-[var(--border)] px-3 py-2 text-sm font-medium text-[var(--muted)] transition-colors hover:border-[var(--accent)] hover:text-[var(--accent)]"
+          >
+            <Bot className="h-4 w-4 shrink-0" />
+            Bot Profile
           </Link>
         </div>
 

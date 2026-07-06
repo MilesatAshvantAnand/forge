@@ -108,6 +108,18 @@ export const SCHEMA_SQL = `
     team_id TEXT
   );
   CREATE INDEX IF NOT EXISTS idx_integrations_project ON integrations(project_id);
+  CREATE TABLE IF NOT EXISTS bot_profiles (
+    id TEXT PRIMARY KEY,
+    project_id TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL DEFAULT 'My Robot',
+    firmware_version TEXT,
+    pros_kernel_version TEXT,
+    brain_type TEXT NOT NULL DEFAULT 'V5',
+    components TEXT NOT NULL DEFAULT '[]',
+    rubric_version TEXT NOT NULL DEFAULT '1',
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL
+  );
 
   -- Better Auth core tables
   CREATE TABLE IF NOT EXISTS user (
@@ -117,7 +129,8 @@ export const SCHEMA_SQL = `
     email_verified INTEGER NOT NULL DEFAULT 0,
     image TEXT,
     created_at INTEGER NOT NULL,
-    updated_at INTEGER NOT NULL
+    updated_at INTEGER NOT NULL,
+    is_anonymous INTEGER DEFAULT 0
   );
   CREATE TABLE IF NOT EXISTS session (
     id TEXT PRIMARY KEY,
@@ -248,6 +261,9 @@ if (useTurso) {
 
   // Phase 1 — Better Auth session extension
   ensureColumn("session", "active_organization_id", "active_organization_id TEXT");
+
+  // Anonymous plugin — guest identity flag
+  ensureColumn("user", "is_anonymous", "is_anonymous INTEGER DEFAULT 0");
 
   // better-sqlite3's drizzle driver returns values synchronously (not
   // Promises), but every call site in this app does `await db.<query>()`.

@@ -92,6 +92,27 @@ export const integrations = sqliteTable("integrations", {
   teamId: text("team_id"),
 });
 
+// ─── Bot Gateway ─────────────────────────────────────────────────────────────
+
+/**
+ * One bot profile per project: the source-of-truth description of the exact
+ * robot (firmware, PROS kernel, brain, port map) that the Bot Gateway checks
+ * generated code against. `components` is a JSON array of
+ * { port, type, label, reversed?, gearset? } objects.
+ */
+export const botProfiles = sqliteTable("bot_profiles", {
+  id: text("id").primaryKey(),
+  projectId: text("project_id").notNull().unique(),
+  name: text("name").notNull().default("My Robot"),
+  firmwareVersion: text("firmware_version"),
+  prosKernelVersion: text("pros_kernel_version"),
+  brainType: text("brain_type").notNull().default("V5"),
+  components: text("components").notNull().default("[]"),
+  rubricVersion: text("rubric_version").notNull().default("1"),
+  createdAt: integer("created_at").notNull(),
+  updatedAt: integer("updated_at").notNull(),
+});
+
 // ─── Better Auth tables ───────────────────────────────────────────────────────
 
 export const user = sqliteTable("user", {
@@ -102,6 +123,8 @@ export const user = sqliteTable("user", {
   image: text("image"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull(),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull(),
+  // Anonymous plugin — true for auto-created guest identities
+  isAnonymous: integer("is_anonymous", { mode: "boolean" }).default(false),
 });
 
 export const session = sqliteTable("session", {

@@ -33,6 +33,43 @@ export function isDemoProjectId(id: string): boolean {
   return id === DEMO_PROJECT_ID;
 }
 
+/**
+ * Read-only example bot profile for the Bot Gateway — mirrors the ports the
+ * seeded demo code actually uses (see src/main.cpp / robotconfig.hpp in the
+ * seed): drive 1–6, intake 7, IMU 10, odometry rotation sensors 11–12.
+ * Idempotent; runs even for DBs seeded before bot profiles existed.
+ */
+async function seedDemoBotProfile(): Promise<void> {
+  await db
+    .insert(schema.botProfiles)
+    .values({
+      id: `${DEMO_PROJECT_ID}-bot`,
+      projectId: DEMO_PROJECT_ID,
+      name: "Demo Robot (9999X)",
+      firmwareVersion: "1.1.5",
+      prosKernelVersion: "4.1.1",
+      brainType: "V5",
+      components: JSON.stringify([
+        { port: 1, type: "motor_11w", label: "left drive front", reversed: true, gearset: "blue_600" },
+        { port: 2, type: "motor_11w", label: "left drive middle", reversed: true, gearset: "blue_600" },
+        { port: 3, type: "motor_11w", label: "left drive back", reversed: true, gearset: "blue_600" },
+        { port: 4, type: "motor_11w", label: "right drive front", gearset: "blue_600" },
+        { port: 5, type: "motor_11w", label: "right drive middle", gearset: "blue_600" },
+        { port: 6, type: "motor_11w", label: "right drive back", gearset: "blue_600" },
+        { port: 7, type: "motor_11w", label: "intake", gearset: "green_200" },
+        { port: 10, type: "imu", label: "inertial sensor" },
+        { port: 11, type: "rotation_sensor", label: "horizontal odometry wheel" },
+        { port: 12, type: "rotation_sensor", label: "vertical odometry wheel" },
+        { port: 21, type: "radio", label: "VEXnet radio" },
+      ]),
+      rubricVersion: "1",
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    })
+    .onConflictDoNothing()
+    .run();
+}
+
 export async function ensureDemoSeeded(id: string): Promise<void> {
   if (id !== DEMO_PROJECT_ID) return;
   // Fast path: once this warm instance has seeded, skip the DB round trip.
@@ -49,6 +86,8 @@ export async function ensureDemoSeeded(id: string): Promise<void> {
     .get();
 
   if (complete) {
+    // Older seeds predate the bot profile — top it up idempotently.
+    await seedDemoBotProfile();
     seededThisInstance = true;
     return;
   }
@@ -123,6 +162,8 @@ export async function ensureDemoSeeded(id: string): Promise<void> {
         .onConflictDoNothing()
         .run();
     }
+
+    await seedDemoBotProfile();
 
     // A starter conversation so the workspace always has one to open.
     const now = Date.now();

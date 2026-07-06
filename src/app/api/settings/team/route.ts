@@ -1,14 +1,20 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/lib/db";
 import { eq } from "drizzle-orm";
-import { requireSession } from "@/lib/auth/dal";
+import { requireRealSession, ForbiddenError } from "@/lib/auth/dal";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await requireSession().catch(() => null);
+  // Team settings require a real (non-anonymous) account
+  const session = await requireRealSession().catch((err) => {
+    return err instanceof ForbiddenError ? { forbidden: err.message } : null;
+  });
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if ("forbidden" in session) {
+    return NextResponse.json({ error: session.forbidden }, { status: 403 });
   }
 
   // Get first team membership
