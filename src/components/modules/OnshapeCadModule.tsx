@@ -14,6 +14,9 @@ import {
   Check,
   Plug,
   Layers,
+  RefreshCw,
+  Boxes,
+  Sparkles,
 } from "lucide-react";
 import type { ProjectMetadata } from "@/lib/types";
 import { formatBytes } from "@/lib/utils";
@@ -54,6 +57,25 @@ interface OnshapeAccountState {
   documents: OnshapeDocument[];
 }
 
+/** Shape of the metadata JSON stored at link time (OnshapeDocumentMetadata). */
+interface OnshapeLinkMetadata {
+  documentId: string;
+  workspaceId: string;
+  name: string;
+  url: string;
+  elements: { id: string; name: string; type: string }[];
+  assemblies: string[];
+  partStudios: string[];
+  fetchedAt: number;
+}
+
+interface OnshapeLink {
+  id: string;
+  name: string;
+  url: string | null;
+  metadata: OnshapeLinkMetadata | null;
+}
+
 interface OnshapeCadModuleProps {
   projectId: string;
   metadata: ProjectMetadata | null;
@@ -86,6 +108,25 @@ export function OnshapeCadModule({
   const [account, setAccount] = useState<OnshapeAccountState | null>(null);
   const [linkingDocId, setLinkingDocId] = useState<string | null>(null);
 
+  // Structural inventory: linked-resource metadata keyed by resource id
+  const [links, setLinks] = useState<Record<string, OnshapeLink>>({});
+  const [selectedCadId, setSelectedCadId] = useState<string | null>(null);
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+
+  const loadLinks = () => {
+    fetch(`/api/projects/${projectId}/onshape`)
+      .then((r) => r.json())
+      .then((d) => {
+        const byId: Record<string, OnshapeLink> = {};
+        for (const link of d.links ?? []) byId[link.id] = link;
+        setLinks(byId);
+      })
+      .catch(() => {
+        /* inventory is progressive enhancement — ignore load failures */
+      });
+  };
+
   useEffect(() => {
     fetch(`/api/projects/${projectId}/onshape/documents`)
       .then((r) => r.json())
@@ -97,7 +138,21 @@ export function OnshapeCadModule({
         })
       )
       .catch(() => setAccount(null));
+    loadLinks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
+
+  const cadResources = resources.filter((r) => r.type === "cad");
+  const onshapeCadResources = cadResources.filter(
+    (r) => r.externalProvider === "onshape" || links[r.id]?.metadata
+  );
+
+  // Keep the selected document valid; default to the first Onshape link
+  useEffect(() => {
+    if (selectedCadId && cadResources.some((r) => r.id === selectedCadId)) return;
+    setSelectedCadId(onshapeCadResources[0]?.id ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resources, links]);
 
   const linkDocument = async (doc: OnshapeDocument) => {
     setLinkingDocId(doc.id);
@@ -107,13 +162,50 @@ export function OnshapeCadModule({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ documentId: doc.id, url: doc.href, name: doc.name }),
       });
-      if (res.ok) onResourceUploaded?.();
+      if (res.ok) {
+        onResourceUploaded?.();
+        loadLinks();
+      }
     } finally {
       setLinkingDocId(null);
     }
   };
 
-  const cadResources = resources.filter((r) => r.type === "cad");
+  const refreshMetadata = async (resourceId: string) => {
+    setRefreshingId(resourceId);
+    setRefreshError(null);
+    try {
+      const res = await fetch(`/api/projects/${projectId}/onshape`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resourceId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setRefreshError(
+          data.error === "onshape-not-connected"
+            ? "Connect the project's Onshape account to refresh metadata."
+            : (data.message ?? data.error ?? "Metadata refresh failed")
+        );
+        return;
+      }
+      setLinks((prev) => ({
+        ...prev,
+        [resourceId]: {
+          id: resourceId,
+          name: data.name,
+          url: data.url,
+          metadata: data.metadata,
+        },
+      }));
+      onResourceUploaded?.();
+    } catch {
+      setRefreshError("Metadata refresh failed");
+    } finally {
+      setRefreshingId(null);
+    }
+  };
+
   const subsystems = metadata?.subsystems ?? [];
   const showDemoChain =
     isDemoProject || subsystems.some((s) => s.name.includes("intake"));
@@ -133,6 +225,7 @@ export function OnshapeCadModule({
       setOnshapeUrl("");
       setConnectSuccess(true);
       onResourceUploaded?.();
+      loadLinks();
       setTimeout(() => setConnectSuccess(false), 2500);
     } catch (err) {
       setConnectError(err instanceof Error ? err.message : "Failed to connect");
@@ -159,6 +252,10 @@ export function OnshapeCadModule({
       setUploading(false);
     }
   };
+
+  const selectedResource =
+    cadResources.find((r) => r.id === selectedCadId) ?? null;
+  const selectedLink = selectedResource ? (links[selectedResource.id] ?? null) : null;
 
   return (
     <ModulePanelShell
@@ -297,12 +394,23 @@ export function OnshapeCadModule({
             <div className="mt-2 flex flex-col gap-1.5">
               {cadResources.map((r) => {
                 const openUrl =
-                  r.externalUrl ?? (r.summary?.startsWith("http") ? r.summary : null);
+                  links[r.id]?.url ??
+                  r.externalUrl ??
+                  (r.summary?.startsWith("http") ? r.summary : null);
                 const hasScopeSummary = r.summary && !r.summary.startsWith("http");
+                const isSelected = selectedCadId === r.id;
                 return (
                   <div
                     key={r.id}
-                    className="glass flex items-center gap-2 rounded-lg px-3 py-2.5 transition-transform duration-200 ease-out will-change-transform hover:scale-[1.03] hover:shadow-lg"
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => setSelectedCadId(r.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") setSelectedCadId(r.id);
+                    }}
+                    className={`glass flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2.5 transition-transform duration-200 ease-out will-change-transform hover:scale-[1.02] hover:shadow-lg ${
+                      isSelected ? "ring-1 ring-[var(--blue)]/50" : ""
+                    }`}
                   >
                     <Box className="h-4 w-4 shrink-0 text-[var(--blue)]" />
                     <div className="min-w-0 flex-1">
@@ -323,6 +431,7 @@ export function OnshapeCadModule({
                         href={openUrl}
                         target="_blank"
                         rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
                         className="flex shrink-0 items-center gap-1 rounded-lg border border-[var(--border)] px-2 py-1 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--blue)]"
                         title="Edit in Onshape (opens new tab)"
                       >
@@ -337,15 +446,36 @@ export function OnshapeCadModule({
           </div>
         )}
 
-        <div className="mt-5 flex h-32 items-center justify-center rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--inset)]">
-          <div className="text-center">
-            <Box className="mx-auto h-9 w-9 text-[var(--blue)] opacity-70" />
-            <p className="mt-2 text-xs text-[var(--muted)]">
-              {cadResources.length > 0
-                ? "3D preview · coming with live Onshape sync"
-                : "Connect or upload to preview assembly"}
-            </p>
+        {selectedResource ? (
+          <CadInventoryPanel
+            resource={selectedResource}
+            link={selectedLink}
+            refreshing={refreshingId === selectedResource.id}
+            refreshError={refreshError}
+            onRefresh={() => refreshMetadata(selectedResource.id)}
+          />
+        ) : (
+          <div className="mt-5 flex h-32 items-center justify-center rounded-xl border border-dashed border-[var(--border-strong)] bg-[var(--inset)]">
+            <div className="text-center">
+              <Box className="mx-auto h-9 w-9 text-[var(--blue)] opacity-70" />
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                {cadResources.length > 0
+                  ? "Select a linked document to see its structure"
+                  : "Connect or upload to preview assembly"}
+              </p>
+            </div>
           </div>
+        )}
+
+        <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--inset)] px-4 py-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
+            <Sparkles className="h-3.5 w-3.5 text-[var(--accent)]" />
+            Phase 2 · coming soon
+          </p>
+          <p className="mt-1.5 text-xs leading-relaxed text-[var(--muted)]">
+            Part-by-part understanding, VEX catalog matching, code cross-reference, and a
+            System Map graph linking CAD ↔ motors ↔ code ↔ notebook.
+          </p>
         </div>
 
         {showDemoChain ? (
@@ -414,5 +544,164 @@ export function OnshapeCadModule({
         )}
       </div>
     </ModulePanelShell>
+  );
+}
+
+/**
+ * Structural inventory for a linked Onshape document.
+ *
+ * Note on embedding: Onshape serves X-Frame-Options: SAMEORIGIN and a
+ * frame-ancestors CSP limited to *.onshape.com, so documents cannot be
+ * iframed by third-party apps. This preview card + "Open in Onshape" is
+ * the supported path.
+ */
+function CadInventoryPanel({
+  resource,
+  link,
+  refreshing,
+  refreshError,
+  onRefresh,
+}: {
+  resource: CadResource;
+  link: OnshapeLink | null;
+  refreshing: boolean;
+  refreshError: string | null;
+  onRefresh: () => void;
+}) {
+  const meta = link?.metadata ?? null;
+  const openUrl =
+    link?.url ??
+    resource.externalUrl ??
+    (resource.summary?.startsWith("http") ? resource.summary : null);
+  const isOnshape = resource.externalProvider === "onshape" || Boolean(meta);
+
+  if (!isOnshape) {
+    return (
+      <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--inset)] p-5">
+        <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
+          CAD export
+        </p>
+        <p className="mt-2 text-sm text-[var(--muted)]">
+          {resource.name}
+          {resource.size > 0 ? ` · ${formatBytes(resource.size)}` : ""} — uploaded
+          export. 3D preview for exported files arrives with the Phase 2 viewer.
+        </p>
+      </div>
+    );
+  }
+
+  const assemblies = meta?.assemblies ?? [];
+  const partStudios = meta?.partStudios ?? [];
+  const otherElements = (meta?.elements ?? []).filter(
+    (e) => e.type !== "ASSEMBLY" && e.type !== "PARTSTUDIO"
+  );
+
+  return (
+    <div className="mt-5 rounded-xl border border-[var(--border)] bg-[var(--inset)] p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold uppercase tracking-widest text-[var(--muted)]">
+            Document structure
+          </p>
+          <p className="mt-1 truncate text-base font-semibold">{meta?.name ?? resource.name}</p>
+          {meta && (
+            <p className="mt-0.5 text-xs text-[var(--muted)]">
+              {assemblies.length} assembl{assemblies.length === 1 ? "y" : "ies"} ·{" "}
+              {partStudios.length} part studio{partStudios.length === 1 ? "" : "s"}
+              {otherElements.length > 0 ? ` · ${otherElements.length} other tabs` : ""}
+              {meta.fetchedAt
+                ? ` · synced ${new Date(meta.fetchedAt).toLocaleDateString()}`
+                : ""}
+            </p>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={refreshing}
+          className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[var(--border)] px-2.5 py-1.5 text-xs font-medium text-[var(--muted)] transition-colors hover:border-[var(--blue)] hover:text-[var(--blue)] disabled:opacity-50"
+          title="Re-fetch assemblies and part studios from Onshape"
+        >
+          {refreshing ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <RefreshCw className="h-3.5 w-3.5" />
+          )}
+          Refresh metadata
+        </button>
+      </div>
+
+      {refreshError && <p className="mt-2 text-xs text-red-400">{refreshError}</p>}
+
+      {meta ? (
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--blue)]">
+              <Boxes className="h-3.5 w-3.5" />
+              Assemblies ({assemblies.length})
+            </p>
+            {assemblies.length === 0 ? (
+              <p className="mt-2 text-xs text-[var(--muted)]">None in this document</p>
+            ) : (
+              <ul className="mt-2 space-y-1">
+                {assemblies.slice(0, 8).map((name) => (
+                  <li key={name} className="truncate text-sm">
+                    {name}
+                  </li>
+                ))}
+                {assemblies.length > 8 && (
+                  <li className="text-xs text-[var(--muted)]">
+                    +{assemblies.length - 8} more
+                  </li>
+                )}
+              </ul>
+            )}
+          </div>
+          <div className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-[var(--accent)]">
+              <Layers className="h-3.5 w-3.5" />
+              Part studios ({partStudios.length})
+            </p>
+            {partStudios.length === 0 ? (
+              <p className="mt-2 text-xs text-[var(--muted)]">None in this document</p>
+            ) : (
+              <ul className="mt-2 space-y-1">
+                {partStudios.slice(0, 8).map((name) => (
+                  <li key={name} className="truncate text-sm">
+                    {name}
+                  </li>
+                ))}
+                {partStudios.length > 8 && (
+                  <li className="text-xs text-[var(--muted)]">
+                    +{partStudios.length - 8} more
+                  </li>
+                )}
+              </ul>
+            )}
+          </div>
+        </div>
+      ) : (
+        <p className="mt-3 text-sm text-[var(--muted)]">
+          No structural metadata yet. Refresh metadata (requires the project&apos;s Onshape
+          connection) to pull the assembly and part-studio inventory.
+        </p>
+      )}
+
+      {openUrl && (
+        <a
+          href={openUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-4 flex items-center justify-center gap-2 rounded-lg bg-[var(--blue)] py-2.5 text-sm font-semibold text-black transition-opacity hover:opacity-90"
+        >
+          <ExternalLink className="h-4 w-4" />
+          Open in Onshape
+        </a>
+      )}
+      <p className="mt-2 text-center text-[11px] text-[var(--muted)]">
+        Onshape blocks embedding its editor in other sites, so the 3D view opens in a new
+        tab.
+      </p>
+    </div>
   );
 }

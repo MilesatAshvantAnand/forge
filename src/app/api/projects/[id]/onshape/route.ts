@@ -34,13 +34,26 @@ export async function GET(
     .from(schema.resources)
     .where(and(eq(schema.resources.projectId, id), eq(schema.resources.type, "cad")))
     .all();
-  const links = rows.map((r) => ({
+  const links = rows.map((r) => {
+    let metadata = null;
+    if (r.metadata) {
+      try {
+        metadata = JSON.parse(r.metadata);
+      } catch {
+        /* corrupt metadata JSON — treat as absent */
+      }
+    }
+    return {
       id: r.id,
       name: r.name,
-      url: r.summary?.startsWith("http") ? r.summary : null,
+      url:
+        r.externalUrl ?? (r.summary?.startsWith("http") ? r.summary : null),
       size: r.size,
       createdAt: r.createdAt,
-    }));
+      externalProvider: r.externalProvider,
+      metadata,
+    };
+  });
 
   return NextResponse.json({ links });
 }
@@ -56,6 +69,14 @@ export async function POST(
 ) {
   const { id } = await params;
   const body = await req.json().catch(() => null);
+
+  // Refresh mode: re-fetch metadata for an already-linked CAD resource
+  // (used by the "Refresh metadata" button in the CAD module).
+  const refreshResourceId =
+    typeof body?.resourceId === "string" ? body.resourceId : null;
+  if (refreshResourceId) {
+    return refreshLinkedResource(id, refreshResourceId);
+  }
 
   const url = typeof body?.url === "string" ? body.url.trim() : "";
   const documentId =
@@ -146,4 +167,101 @@ export async function POST(
     url: externalUrl,
     metadata: metadataJson ? JSON.parse(metadataJson) : null,
   });
+}
+
+/** Re-fetch Onshape metadata for a linked CAD resource and update it in place. */
+async function refreshLinkedResource(projectId: string, resourceId: string) {
+  const resource = await db
+    .select()
+    .from(schema.resources)
+    .where(
+      and(
+        eq(schema.resources.projectId, projectId),
+        eq(schema.resources.id, resourceId),
+        eq(schema.resources.type, "cad")
+      )
+    )
+    .get();
+
+  if (!resource) {
+    return NextResponse.json({ error: "Linked CAD resource not found" }, { status: 404 });
+  }
+
+  let documentId: string | null = null;
+  if (resource.metadata) {
+    try {
+      const parsed = JSON.parse(resource.metadata);
+      if (typeof parsed?.documentId === "string") documentId = parsed.documentId;
+    } catch {
+      /* fall through to URL parsing */
+    }
+  }
+  if (!documentId) {
+    const candidateUrl =
+      resource.externalUrl ??
+      (resource.summary?.startsWith("http") ? resource.summary : null);
+    if (candidateUrl) documentId = parseDocumentIdFromUrl(candidateUrl);
+  }
+  if (!documentId) {
+    return NextResponse.json(
+      { error: "Could not determine the Onshape document id for this link" },
+      { status: 400 }
+    );
+  }
+
+  const token = await getOnshapeToken(projectId);
+  if (!token) {
+    return NextResponse.json(
+      {
+        error: "onshape-not-connected",
+        message: "Connect the project's Onshape account to refresh metadata.",
+      },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const meta = await fetchOnshapeDocumentMetadata(token, documentId);
+    const summary =
+      [
+        meta.assemblies.length > 0
+          ? `Assemblies: ${meta.assemblies.join(", ")}`
+          : null,
+        meta.partStudios.length > 0
+          ? `Part studios: ${meta.partStudios.join(", ")}`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(" · ") || meta.url;
+
+    await db
+      .update(schema.resources)
+      .set({
+        name: meta.name,
+        externalUrl: meta.url,
+        metadata: JSON.stringify(meta),
+        summary,
+      })
+      .where(eq(schema.resources.id, resource.id))
+      .run();
+
+    await db
+      .update(schema.projects)
+      .set({ updatedAt: Date.now() })
+      .where(eq(schema.projects.id, projectId))
+      .run();
+
+    return NextResponse.json({
+      id: resource.id,
+      name: meta.name,
+      url: meta.url,
+      metadata: meta,
+    });
+  } catch (err) {
+    console.error("Onshape metadata refresh failed:", err);
+    return NextResponse.json(
+      { error: "Onshape metadata fetch failed" },
+      { status: 502 }
+    );
+  }
 }
