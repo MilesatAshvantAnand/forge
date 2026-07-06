@@ -133,21 +133,33 @@ export function EngineeringNotebookModule({
 
         {tab === "documents" && docResources.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2">
-            {docResources.map((r) => (
-              <button
-                key={r.id}
-                type="button"
-                onClick={() => setActiveId(r.id)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
-                  activeId === r.id
-                    ? "border-[var(--accent)] bg-[var(--accent-dim)] text-[var(--accent)]"
-                    : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--border-strong)]"
-                }`}
-              >
-                <FileText className="h-3.5 w-3.5" />
-                {r.name}
-              </button>
-            ))}
+            {docResources.map((r) => {
+              const isPptx = r.name.toLowerCase().endsWith(".pptx");
+              return (
+                <button
+                  key={r.id}
+                  type="button"
+                  onClick={() => setActiveId(r.id)}
+                  className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors ${
+                    activeId === r.id
+                      ? "border-[var(--accent)] bg-[var(--accent-dim)] text-[var(--accent)]"
+                      : "border-[var(--border)] text-[var(--muted)] hover:border-[var(--border-strong)]"
+                  }`}
+                >
+                  {isPptx ? (
+                    <Presentation className="h-3.5 w-3.5" />
+                  ) : (
+                    <FileText className="h-3.5 w-3.5" />
+                  )}
+                  {r.name}
+                  {isPptx && (
+                    <span className="ml-0.5 rounded px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-[var(--orange-dim,rgba(234,88,12,0.1))] text-[var(--orange,#ea580c)]">
+                      PPTX
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
 
@@ -247,7 +259,7 @@ export function EngineeringNotebookModule({
               ) : (
                 <Paperclip className="h-4 w-4" />
               )}
-              Attach notebook or PDF
+              Attach notebook, PDF, or PPTX
             </button>
           </>
         )}

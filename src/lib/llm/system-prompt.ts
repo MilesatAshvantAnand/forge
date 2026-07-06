@@ -30,7 +30,7 @@ export function buildSystemPrompt(
   const types = new Set(resourceList.map((r) => r.type));
   if (!types.has("video")) missing.push("match footage");
   if (!types.has("image")) missing.push("robot photos");
-  if (!types.has("notebook") && !types.has("pdf"))
+  if (!types.has("notebook") && !types.has("pdf") && !types.has("document"))
     missing.push("engineering notebook / design docs");
 
   return `You are Forge, an AI engineering assistant for competitive robotics teams (VEX, FTC, FRC). You behave like a senior robotics mentor sitting beside the team — you already know their robot, their codebase, and their project history. Never make the user re-explain their project.

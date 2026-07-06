@@ -1,5 +1,5 @@
 import { mkdirSync, writeFileSync, readFileSync, existsSync } from "fs";
-import { join, dirname } from "path";
+import { join, dirname, resolve, isAbsolute } from "path";
 import { defaultDataDir } from "@/lib/runtime-paths";
 
 /**
@@ -55,9 +55,15 @@ export async function readResourceFile(storagePath: string): Promise<Buffer | nu
     }
   }
 
-  if (!existsSync(storagePath)) return null;
+  // Resolve relative paths (e.g. "samples/foo.pptx" from demo seed) against
+  // the project root (process.cwd()) so they work in both dev and on Vercel.
+  const absPath = isAbsolute(storagePath)
+    ? storagePath
+    : resolve(process.cwd(), storagePath);
+
+  if (!existsSync(absPath)) return null;
   try {
-    return readFileSync(storagePath);
+    return readFileSync(absPath);
   } catch {
     return null;
   }
